@@ -6,10 +6,12 @@ import pandas as pd
 import glob
 
 
-allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Praha/2020*csv")
+station = 'Praha'
+years = '1996'
+
+allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/2020*csv")
 
 list_data = []
-list_mdata = []
 list_udata = []
 
 dfm = pd.DataFrame()
@@ -24,16 +26,17 @@ for filename in allFiles:
 
     # access all tables
     tables = extcsv_to.sections.keys()
+    print(tables, len(tables))
 
     ## first copy the profile data and delete this from the keys to save the metadata. For Praha data it is 'PORFILE',
     # watch out that this naming may change from station to station
     profile_keys = extcsv_to.sections['PROFILE'].keys()
     Profile = extcsv_to.sections['PROFILE']['_raw']
-    Profile_uncertainity = extcsv_to.sections['PROFILE_UNCERTAINTY']['_raw']
+    # Profile_uncertainity = extcsv_to.sections['PROFILE_UNCERTAINTY']['_raw']
 
     ## this sections are the ozone profile data
     del extcsv_to.sections['PROFILE']
-    del extcsv_to.sections['PROFILE_UNCERTAINTY']
+    # del extcsv_to.sections['PROFILE_UNCERTAINTY']
 
     msize = len(tables)
 
@@ -50,24 +53,23 @@ for filename in allFiles:
             # print(fi, " , " , mstr, " , ", kstr , " , ", extcsv_to.sections[dict][list(keys)[j]])
             dfm.at[fi, astr] = extcsv_to.sections[dict][list(keys)[j]]
 
-    list_mdata.append(dfm)
     #
     dfprofile = StringIO(Profile)
     df = pd.read_csv(dfprofile)
     df['Date'] = dfm.at[fi, 'TIMESTAMP_Date']
     df['Station'] = dfm.at[fi, 'DATA_GENERATION_Agency']
+    list_data.append(df)
 
     fi = fi + 1
-    list_data.append(df)
+
     #
-    dfprofile_uncertainity = StringIO(Profile_uncertainity)
-    df_uncer = pd.read_csv(dfprofile_uncertainity)
-    list_udata.append(df_uncer)
+    # dfprofile_uncertainity = StringIO(Profile_uncertainity)
+    # df_uncer = pd.read_csv(dfprofile_uncertainity)
+    # list_udata.append(df_uncer)
 
 dff = pd.concat(list_data,ignore_index=True)
-dfu = pd.concat(list_udata,ignore_index=True)
-dfmf = pd.concat(list_mdata,ignore_index=True)
+# dfu = pd.concat(list_udata,ignore_index=True)
 
-dff.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Praha_2020.csv")
-dfu.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Praha_2020_unc.csv")
-dfmf.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Praha_2020_metadata.csv")
+dff.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_1996.csv")
+# dfu.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_1996_unc.csv")
+dfm.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_1996_metadata.csv")
