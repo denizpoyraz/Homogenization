@@ -13,12 +13,13 @@ print('DF metada', list(dfm))
 ## start with the guidelines: with an example of Praha Data:
 
 # Time series O3S-Parameters
-# 1) Total ozone normalization: FLIGHT_SUMMARY_CorrectionFactor -> FLIGHT_SUMMARY_TotalO3 / FLIGHT_SUMMARY_SondeTotalO3
-# 2) TOC by Brewer or Dobson: FLIGHT_SUMMARY_TotalO3
+# 1) Total ozone normalization: #FLIGHT_SUMMARY_CorrectionFactor# -> FLIGHT_SUMMARY_TotalO3 / FLIGHT_SUMMARY_SondeTotalO3
+# 2) TOC by Brewer or Dobson: #FLIGHT_SUMMARY_TotalO3#
 # 3) ROC above burst ?
-# 4) Pump flow rate : PumpFlowRate , but what about the unit? is it PumpFlowRate or
-# 5) Pump temperature in flight, SampleTemperature, and at launch and at Pair = 400, 200, 100, 50, 25hPa
+# 4) Pump flow rate : #PumpFlowRate# , but what about the unit? is it PumpFlowRate or
+# 5) Pump temperature in flight, SampleTemperature, and at launch and at Pair = 400, 200, 100, 50, 25hPa -> #SampleTemperature#
 
 ## example to clean NAN values
 # result.loc[result['Ib0'].isnull(),'Ib0_is_NaN'] = 'Yes'
 # result.loc[result['Ib0'].notnull(),'Ib0_is_NaN'] = 'No'
+
