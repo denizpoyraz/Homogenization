@@ -23,3 +23,12 @@ print('DF metada', list(dfm))
 # result.loc[result['Ib0'].isnull(),'Ib0_is_NaN'] = 'Yes'
 # result.loc[result['Ib0'].notnull(),'Ib0_is_NaN'] = 'No'
 
+## conversion of pressure to Current
+# what kind of corrections are available apart from the Pump Flow efficiency
+
+
+# :param boolother: a boolean for if any other correction is applied
+
+if(boolother == False):
+    cur = 0.043085 * etac * phip/tpump  + ib
+

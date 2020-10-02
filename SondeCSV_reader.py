@@ -1,12 +1,13 @@
 import csv
 import numpy as np
 from io import StringIO
-from woudc_extcsv import load
+from woudc_extcsv import load, WOUDCExtCSVReaderError
 import pandas as pd
 import glob
 
+station = 'Sodonkyla'
+efile = open("errorfile_" + station + ".txt", "w")
 
-station = 'Praha'
 
 # allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/19960219*csv")
 allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/*.csv")
@@ -16,25 +17,32 @@ list_udata = []
 dfm = pd.DataFrame()
 fi = 0
 
+
 for filename in allFiles:
 
     print(filename)
-    extcsv_to = load(filename)
+    # try except is applied for the cases when there is formatting error: WOUDCExtCSVReaderError
+    try:
+        extcsv_to = load(filename)
+        # access all tables
+        tables = extcsv_to.sections.keys()
+        ## first copy the profile data and delete this from the keys to save the metadata. For Praha data it is 'PORFILE',
+        # watch out that this naming may change from station to station
+        profile_keys = extcsv_to.sections['PROFILE'].keys()
+        Profile = extcsv_to.sections['PROFILE']['_raw']
+        del extcsv_to.sections['PROFILE']
+        # Profile_uncertainity = extcsv_to.sections['PROFILE_UNCERTAINTY']['_raw']
 
-    # access all tables
-    tables = extcsv_to.sections.keys()
-
-    ## first copy the profile data and delete this from the keys to save the metadata. For Praha data it is 'PORFILE',
-    # watch out that this naming may change from station to station
-    profile_keys = extcsv_to.sections['PROFILE'].keys()
-    Profile = extcsv_to.sections['PROFILE']['_raw']
-    # Profile_uncertainity = extcsv_to.sections['PROFILE_UNCERTAINTY']['_raw']
+    except WOUDCExtCSVReaderError:
+        efile.write(filename  + '\n')
+        tables = [0]
 
     ## this sections are the ozone profile data
-    del extcsv_to.sections['PROFILE']
     # del extcsv_to.sections['PROFILE_UNCERTAINTY']
 
     msize = len(tables)
+
+    if msize == 1: continue
 
     for i in range(msize):
         dict = list(tables)[i]
@@ -62,15 +70,15 @@ for filename in allFiles:
     # check this information from the data-sheets provided by the station
     # to be implemented by hand
 ###
-    dfm.at[fi,'SondeTypeChange'] = False
-    dfm.at[fi,'SSTChange'] = False
-    dfm.at[fi,'BkgCurrentChange'] = 'iB2toiB0_2003'
-    dfm.at[fi,'BkgCurrentCorrectionChange'] = 'AltDeptoConstant_2003'
-    dfm.at[fi,'PumpTempLocationChange'] = 'BoxtoHole_19970131'
-    dfm.at[fi,'PumpFlowMeasChange'] = False
-    dfm.at[fi,'PumpFlowEfficiencyChange'] = False
-    dfm.at[fi,'TONChange'] = 'DobsontoBrewer_2000'
-    dfm.at[fi,'RSChange'] = True
+    # dfm.at[fi,'SondeTypeChange'] = False
+    # dfm.at[fi,'SSTChange'] = False
+    # dfm.at[fi,'BkgCurrentChange'] = 'iB2toiB0_2003'
+    # dfm.at[fi,'BkgCurrentCorrectionChange'] = 'AltDeptoConstant_2003'
+    # dfm.at[fi,'PumpTempLocationChange'] = 'BoxtoHole_19970131'
+    # dfm.at[fi,'PumpFlowMeasChange'] = False
+    # dfm.at[fi,'PumpFlowEfficiencyChange'] = False
+    # dfm.at[fi,'TONChange'] = 'DobsontoBrewer_2000'
+    # dfm.at[fi,'RSChange'] = True
 ###
 
     dfprofile = StringIO(Profile)
@@ -84,6 +92,8 @@ for filename in allFiles:
     # dfprofile_uncertainity = StringIO(Profile_uncertainity)
     # df_uncer = pd.read_csv(dfprofile_uncertainity)
     # list_udata.append(df_uncer)
+
+efile.close()
 
 dff = pd.concat(list_data,ignore_index=True)
 # dfu = pd.concat(list_udata,ignore_index=True)
