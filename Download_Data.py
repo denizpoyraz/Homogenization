@@ -8,11 +8,11 @@ import pandas as pd
 
 # df = pd.read_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/woudc-DataURLFileList_Praha_All.csv", low_memory=False)
 # df = pd.read_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/woudc-DataURLFileList_Madrid_All.csv", low_memory=False)
-df = pd.read_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Sodonkyla/woudc-DataURLFileList_Sod.csv", low_memory=False)
+df = pd.read_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Madrid/woudc-DataURLFileList_madrid_14to20.csv", low_memory=False)
 
 
 
-pathout = 'Sodonkyla'
+pathout = 'Madrid'
 
 size = len(df)
 
@@ -31,7 +31,7 @@ for i in range(size):
 
     url_content = req.content
 
-    csv_file = open('../Files/' + pathout + '/' + name, 'wb')
+    csv_file = open('../Files/' + pathout + '/CSV/' + name, 'wb')
 
     csv_file.write(url_content)
 

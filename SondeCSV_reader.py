@@ -5,12 +5,12 @@ from woudc_extcsv import load, WOUDCExtCSVReaderError
 import pandas as pd
 import glob
 
-station = 'Sodonkyla'
+station = 'Madrid'
 efile = open("errorfile_" + station + ".txt", "w")
 
 
 # allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/19960219*csv")
-allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/*.csv")
+allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/CSV/*.csv")
 
 list_data = []
 list_udata = []
@@ -55,7 +55,7 @@ for filename in allFiles:
             for t in range(tsize):
                 cstr = test_df.columns.tolist()
                 if(len(test_df) > 0):
-                    dfm.at[fi, cstr[t]] = test_df.at[0,cstr[t]]
+                    dfm.at[fi, cstr[t]] = test_df.at[test_df.first_valid_index(),cstr[t]]
                 if(len(test_df) == 0): continue
 
         for j in range(1, ksize):
