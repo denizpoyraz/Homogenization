@@ -12,6 +12,13 @@ dfmeta = pd.read_excel("/home/poyraden/Analysis/Homogenization_Analysis/Files/Ma
 dfmeta['DateTime'] = dfmeta['DateTime'].apply(lambda x: pd.to_datetime(str(x), format='%Y-%m-%d %H'))
 dfmeta['Date'] = dfmeta['DateTime'].dt.strftime('%d/%m/%Y')
 dfmeta['Datef2'] = dfmeta['DateTime'].dt.strftime('%Y-%m-%d')
+dfmeta['iB2'] = dfmeta['iB2'].astype(float)
+#
+# for i in range(len(dfmeta)):
+#     # dfmeta['iB2'] = dfmeta['iB2'].astype(float)
+#     try:
+#         dfmeta.at[i,'iB2'] = np.float(dfmeta.at[i,'iB2'])
+#     except ValueError: print(i, dfmeta.at[i,'Datef2'], dfmeta.at[i,'iB2'])
 
 
 # '2020-10-14'

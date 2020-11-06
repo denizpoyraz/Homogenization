@@ -3,10 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
 
-from Homogenisation_Functions import po3tocurrent
+from Homogenisation_Functions import po3tocurrent, conversion_absorption, conversion_efficiency, background_correction
 
 ## WOUDC data file
 df = pd.read_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_Madrid_All.csv")
+# df['O3PartialPressure'] = df['O3PartialPressure'].str.replace(':', '')
+df.loc[(df['O3PartialPressure'] == '4:.090'), 'O3PartialPressure'] = '4.090'
+df['O3PartialPressure'] = df['O3PartialPressure'].astype(float)
+# df['imc'] = 0
+
 
 ## WOUDC metadata file
 dfm = pd.read_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_Madrid_All_metadata.csv")
@@ -29,6 +34,7 @@ woudc_date = dfm.TIMESTAMP_Date.tolist()
 common_dates = list(set(excel_date).intersection(set(woudc_date)))
 dfme = dfme[dfme['Datef2'].isin(common_dates)]
 dfm = dfm[dfm['TIMESTAMP_Date'].isin(common_dates)]
+dfme = dfme.fillna(dfme.mean())
 
 ## dates which are in excel date and not in woudc data and vice versa
 extra_enw = [item for item in excel_date if item not in woudc_date] #in excel list but not in woudc
@@ -40,32 +46,40 @@ print('df', list(df))
 
 ## now use df date to use each corresponding ib0 values
 datelist = np.array(dfme.Datef2.tolist())
-print(datelist[0:5])
 
-dft = df[df.Date == '1994-12-14']
-dft = dft.reset_index()
-dft['etac'] = 1.0
-dfmet = dfme[dfme.Datef2 =='1994-12-14']
-pf = dfmet.at[dfmet.first_valid_index(),'PF']
-dft['phip'] = 100. / pf
-print('main', dfmet.at[dfmet.first_valid_index(),'iB2'])
-dft['ib']  = np.float(dfmet.at[dfmet.first_valid_index(),'iB2'])
+list_data = []
+
+dft = {}
+for d in range(len(datelist)):
+
+    dft[d] = df[df.Date == datelist[d]]
+    dft[d] = dft[d].reset_index()
+    dfmet = dfme[dfme.Datef2 == datelist[d]]
+    ##conversion efficiency
+    dft[d]['alpha_o3'], dft[d]['alpha_unc'] = conversion_absorption(dft[d], 'Pressure', 3.0)
+    dft[d]['etac'], dft[d]['unc_eta'] = conversion_efficiency(dft[d], 'alpha_o3', 'alpha_unc', 1, 1, False)
+    dft[d]['ib2_tmp'] = np.float(dfmet.at[dfmet.first_valid_index(), 'iB2'])
+    dft[d]['ib2'], dft[d]['unc_ib2'] = background_correction(dft[d],'ib2_tmp')
 
 
-dft['IMc'] = po3tocurrent(dft,'O3PartialPressure', 'Pressure', 'SampleTemperature', 'ib', 'etac', 'phip', 'RS41', False)
+    # dft[d]['etac'] = 1
+    pf = (dfmet.at[dfmet.first_valid_index(), 'PF'])
+    dft[d]['phip'] = 100 / pf
 
-# for d in range(len(datelist)):
+    dft[d]['IMc'] = po3tocurrent(dft[d], 'O3PartialPressure', 'Pressure', 'SampleTemperature', 'ib2', 'etac', 'phip', 'RS41', False,'IMc')
+
+    list_data.append(dft[d])
+    #  end of the allfiles loop    #
+
+# Merging all the data files to df
+dfn = pd.concat(list_data, ignore_index=True)
+
+
+# po3tocurrent(df, o3, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolcorrection)
+
+print('end list', list(dfn))
+
+dfn.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_Madrid_All_Homogonized.csv")
 #
-#     df[df.Date == datelist[d]]['ib'] = dfme[dfme.Datef2 == datelist[d]].iB2
-#     df[df.Date == datelist[d]]['etac'] = 1
-#     df[df.Date == datelist[d]]['phip'] = 100 / dfme[dfme.Datef2 == datelist[d]].PF
 #
-#     df[df.Date == datelist[d]]['IMc'] = po3tocurrent(df[df.Date == datelist[d]],'O3PartialPressure', 'Pressure', 'SampleTemperature', 'ib', 'etac', 'phip', 'RS41', False  )
-#     # print(df[df.Date == datelist[d]]['IMc'])
-#
-#     dft = df[df.Date == datelist[d]]
-#     print(datelist[d], dft.at(dft.first_valid_index(),'IMc'))
-# # po3tocurrent(df, o3, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolcorrection)
-
-
 # df.to_cs()

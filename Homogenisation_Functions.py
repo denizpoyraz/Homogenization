@@ -26,7 +26,22 @@ RS41_pval = np.array([2.0, 3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 100.0, 200.0, 300.0
 RS41_cor = np.flipud(RS41_cor)
 RS41_pval = np.flipud(RS41_pval)
 
-def po3tocurrent(df, o3, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolcorrection):
+def background_correction(df,ib):
+    '''
+    :param df:
+    :param ib2:
+    :return: df[ib]
+    '''
+    median = np.median(df[df[ib]< 0.1][ib])
+    std = np.std(df[df[ib]< 0.1][ib])
+    df.loc[(df[ib] > median + 2*std) | (df[ib]< median - 2 * std), ib] = median
+    df.loc[(df[ib]> median + 2*std) | (df[ib]< median - 2 * std), 'unc_ib'] = 2*std
+    df.loc[(df[ib]<= median + 2*std) & (df[ib]>= median - 2 * std), 'unc_ib'] = std
+
+    return df[ib], df['unc_ib']
+
+
+def po3tocurrent(df, o3, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolcorrection, imc):
     '''
     :param df: dataframe
     :param o3: partial ozone pressure of the sonde
@@ -40,69 +55,72 @@ def po3tocurrent(df, o3, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolco
     :return: Current obtained from PO3
     '''
 
-    current = [0.0]*len(df)
+    pump_corr = np.zeros(len(RS41_pval))
 
-    for k in range(len(df)):
+    if pumpcorrectiontag == 'RS41':
+        for j in range(len(RS41_pval) - 1):
+            if (boolcorrection == False):
+                df.loc[(df[o3] == 0), imc] = 0
+                # dfd = df[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1])]
+                df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), imc] =\
+                    (df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), o3] *
+                     df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), etac]
+                     * df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), phip]) /\
+                    (RS41_cor[j] * (df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), tpump] + 273) * 0.043085) \
+                    + df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), ib]
+                # print((dfd[o3] * dfd[etac] * dfd[phip]) /(RS41_cor[j] * (dfd[tpump] + 273) * 0.043085) + dfd[ib])
+    # else:
+    #     for i in range(len(pval)-1):
+    #         df[df.o3 == 0].imc = 0
+    #
+    #         if (boolcorrection == False):
+    #             dfd = df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])]
+    #
+    #             if pumpcorrectiontag == 'komhyr_86':
+    #                 df.loc[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1]),imc] = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                                      (komhyr_86[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #             if pumpcorrectiontag == 'komhyr_95':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (komhyr_95[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #             if pumpcorrectiontag == 'john_02':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (john_02[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #             if pumpcorrectiontag == 'sbrecht_98':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (sbrecht_98[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #
+    #             if pumpcorrectiontag == 'kob_66':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (kob_66[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
 
-        pump_corr = np.zeros(len(RS41_pval))
-
-        if pumpcorrectiontag == 'RS41':
-            for j in range(len(RS41_pval) - 1):
-                # print('corr',k, j,  df.at[k, pair], RS41_pval[j], RS41_pval[j+1],  RS41_cor[j])
-                if(df.at[k, pair] < RS41_pval[j]) & (df.at[k, pair] >= RS41_pval[j+1]):
-                    # if (df.at[k, 'Pair'] >= Pval[p + 1]) & (df.at[k, 'Pair'] < Pval[p]):
-                    pump_corr[j] = RS41_cor[j]
-                    if (boolcorrection == False):
-                        if df.at[k, o3] == 0:
-                            current[k] = 0.0
-                        else:
-                            current[k] = (df.at[k, o3] * df.at[k, etac] * df.at[k, phip]) / (
-                                        pump_corr[j] * (df.at[k, tpump] + 273) * 0.043085) + df.at[k, ib]
-
-
-        else:
-            for i in range(len(pval)-1):
-                if(df[pair] < pval[i]) & (df[pair] >= pval[i+1]):
-                    if pumpcorrectiontag == 'komhyr_86': pump_corr = komhyr_86[i]
-                    if pumpcorrectiontag == 'komhyr_95': pump_corr = komhyr_95[i]
-                    if pumpcorrectiontag == 'john_02': pump_corr = john_02[i]
-                    if pumpcorrectiontag == 'sbrecht_98': pump_corr = sbrecht_98[i]
-                    if pumpcorrectiontag == 'kob_66': pump_corr = kob_66[i]
-                    if (boolcorrection == False):
-                        if df.at[k, o3] == 0:
-                            current[k] = 0.0
-                        else:
-                            current[k] = (df.at[k, o3] * df.at[k, etac] * df.at[k, phip]) / (pump_corr * (df.at[k, tpump]+273) * 0.043085) + df.at[k, ib]
-
-
-
-        # dfr['Ic2'] = (dfr['O3'] * 1000) / (0.43085 * (dfr['Tbox'] + 273.15) * dfr['PF']) + dfr['iB0']
-
-        # df.at[k, 'PO3_OPM'] * df.at[k, 'PFcor'] * JMA[p] / (df.at[k, 'TPext'] * 0.043085)
-
-    ## husband check type hinting
-    ## read pep8 python husband :/
-    print('max', np.nanmax(current))
-
-    return current
+    return df[imc]
 
 
-def conversion_absorption(pair, solvolume):
-    ''''
-    pair: Pressure of the air
-    solvolume: volume of the cathode solution in mls
-    ( i might also need to add the year)
+def conversion_absorption(df, pair, solvolume):
     '''
-    for k in range(len(pair)):
+    :param df: dataframe
+    :param pair: air pressure column
+    :param solvolume: volume of the cathode solution in mls
+    :return: absorption efficeincy and its uncertainity
+    '''
 
-        if solvolume == 2.5:
-            if (pair[k] > 100) and (pair[k] < 1050): alpha_o3 = 1.0044 - 4.4 * 10 ** -5 * pair[k]
-            if pair[k] <= 100: alpha_o3 = 1.00
-        if (solvolume == 3.0) and (pair[k] < 1050): alpha_o3 = 1.0
+    if solvolume == 2.5:
+        df.loc[(df[pair] > 100) & (df[pair] < 1050), 'alpha_o3'] = 1.0044 - 4.4 * 10 ** -5 * df[pair]
+        df.loc[(df[pair] <= 100), 'alpha_o3'] = 1.0
+    if solvolume == 3.0:
+        df.loc[(df[pair] <= 1050), 'alpha_o3'] = 1.0
+    df['unc_alpha'] = 0.01
 
-    unc_alpha = 0.01
 
-    return alpha_o3, unc_alpha
+    # for k in range(len(pair)):
+    #
+    #     if solvolume == 2.5:
+    #         if (pair[k] > 100) and (pair[k] < 1050): alpha_o3 = 1.0044 - 4.4 * 10 ** -5 * pair[k]
+    #         if pair[k] <= 100: alpha_o3 = 1.00
+    #     if (solvolume == 3.0) and (pair[k] < 1050): alpha_o3 = 1.0
+
+
+    return df['alpha_o3'], df['unc_alpha']
 
 
 def conversion_stoichemtry(pair, sondesstone, sondessttwo):
@@ -134,7 +152,7 @@ def conversion_stoichemtry(pair, sondesstone, sondessttwo):
     return r, unc_r
 
 
-def conversion_efficiency(alpha, alpha_unc, rstoich, rstoich_err, boolsstchange):
+def conversion_efficiency(df, alpha_o3, alpha_unc, rstoich, rstoich_err, boolsstchange):
     '''
 
     :param alpha: absorption efficiency obtained by conversion_absorption
@@ -145,17 +163,16 @@ def conversion_efficiency(alpha, alpha_unc, rstoich, rstoich_err, boolsstchange)
     in SST or Sonde Tyoe
     :return: total efficiency of the conversion etac_c and its uncertainity Eq. 4 from the guideline
     '''
-
     stoich = 1
     stoich_unc = 0.03
-    eta_c = alpha * stoich
-    unc_eta = eta_c * np.sqrt((alpha_unc / alpha) ** 2 + (stoich_unc / stoich) ** 2)
+    df['eta_c'] = df[alpha_o3] * stoich
+    df['unc_eta'] = df['eta_c'] * np.sqrt((df[alpha_unc] / df[alpha_o3]) ** 2 + (stoich_unc / stoich) ** 2)
 
     if boolsstchange:
-        eta_c = alpha * stoich
-        unc_eta = eta_c * np.sqrt((alpha_unc / alpha) ** 2 + (stoich_unc / stoich) ** 2 + (rstoich_err / rstoich) ** 2)
+        df['eta_c'] = df[alpha_o3] * stoich
+        df['unc_eta'] = df['eta_c'] * np.sqrt((alpha_unc / df[alpha_o3]) ** 2 + (stoich_unc / stoich) ** 2 + (rstoich_err / rstoich) ** 2)
 
-    return eta_c, unc_eta
+    return df['eta_c'], df['unc_eta']
 
 
 #############
