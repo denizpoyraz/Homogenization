@@ -57,16 +57,21 @@ for d in range(len(datelist)):
     dfmet = dfme[dfme.Datef2 == datelist[d]]
     ##conversion efficiency
     dft[d]['alpha_o3'], dft[d]['alpha_unc'] = conversion_absorption(dft[d], 'Pressure', 3.0)
-    dft[d]['etac'], dft[d]['unc_eta'] = conversion_efficiency(dft[d], 'alpha_o3', 'alpha_unc', 1, 1, False)
+    dft[d]['etac_tmp'] = 1
     dft[d]['ib2_tmp'] = np.float(dfmet.at[dfmet.first_valid_index(), 'iB2'])
+    dft[d]['phip'] = 100 / pf
+
+    dft[d]['IMc'] = po3tocurrent(dft[d], 'O3PartialPressure', 'Pressure', 'SampleTemperature', 'ib2_tmp', 'etac_tmp', 'phip', 'RS41', False,'IMc')
+
     dft[d]['ib2'], dft[d]['unc_ib2'] = background_correction(dft[d],'ib2_tmp')
+    dft[d]['etac'], dft[d]['unc_eta'] = conversion_efficiency(dft[d], 'alpha_o3', 'alpha_unc', 1, 1, False)
 
 
     # dft[d]['etac'] = 1
     pf = (dfmet.at[dfmet.first_valid_index(), 'PF'])
     dft[d]['phip'] = 100 / pf
 
-    dft[d]['IMc'] = po3tocurrent(dft[d], 'O3PartialPressure', 'Pressure', 'SampleTemperature', 'ib2', 'etac', 'phip', 'RS41', False,'IMc')
+    # dft[d]['IMc'] = po3tocurrent(dft[d], 'O3PartialPressure', 'Pressure', 'SampleTemperature', 'ib2', 'etac', 'phip', 'RS41', False,'IMc')
 
     list_data.append(dft[d])
     #  end of the allfiles loop    #

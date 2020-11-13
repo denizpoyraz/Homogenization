@@ -27,11 +27,11 @@ RS41_cor = np.flipud(RS41_cor)
 RS41_pval = np.flipud(RS41_pval)
 
 def background_correction(df,ib):
-    '''
+    """
     :param df:
     :param ib2:
     :return: df[ib]
-    '''
+    """
     median = np.median(df[df[ib]< 0.1][ib])
     std = np.std(df[df[ib]< 0.1][ib])
     df.loc[(df[ib] > median + 2*std) | (df[ib]< median - 2 * std), ib] = median
@@ -94,6 +94,47 @@ def po3tocurrent(df, o3, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolco
     #                                                                            (kob_66[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
 
     return df[imc]
+
+
+def pumptemp_corr(df, boxlocation, temp, unc_temp, pair):
+    '''
+    :param df: dataframe
+    :param boxlocation: location of the temperature measurement
+    :param temp: temp. of the pump that was measured at boxlocation
+    :param pressure: pressure of the air
+    :return: the corrected base temperature of the pump
+    '''
+    if boxlocation == 'box': #case I in O3S-DQA guide
+        df.loc[(df[pair] >= 40), 'deltat'] = 7.43 - 0.393 * np.log10(df.loc[(df[pair] >= 40), pair])
+        df.loc[(df[pair] < 40) & (df[pair] > 6), 'deltat'] = 2.7 + 2.6 * np.log10(df.loc[(df[pair] < 40) & (df[pair] > 6), pair])
+        df.loc[(df[pair] <= 6), 'deltat'] = 4.5
+        df['unc_tpump'] = 1 #units in K
+
+    if boxlocation == 'externalpump_taped': #case III in O3S-DQA guide
+        df.loc[(df[pair] > 70), 'deltat'] = 20.6 - 6.7 * np.log10(df.loc[(df[pair] > 70), pair])
+        df.loc[(df[pair] > 70), 'unc_tpump'] = 3.9 - 1.13 * np.log10(df.loc[(df[pair] > 70), pair])
+        df.loc[(df[pair] <= 70) & (df[pair] >= 15), 'deltat'] = 8.25
+        df.loc[(df[pair] < 15) & (df[pair] >= 5), 'deltat'] = 3.25 - 4.25 * np.log10(df.loc[(df[pair] < 15) & (df[pair] >= 5), pair])
+        df.loc[(df[pair] <= 70), 'unc_tpump'] = 0.3 + 1.13 * np.log10(df.loc[(df[pair] <= 70), pair])
+
+    if boxlocation == 'externalpump_glued': #case IV in O3S-DQA guide
+        df.loc[(df[pair] > 40), 'deltat'] = 6.4 - 2.14 * np.log10(df.loc[(df[pair] > 40), pair])
+        df.loc[(df[pair] <= 40) & (df[pair] >= 3), 'deltat'] = 3.0
+        df['unc_tpump'] = 0.5 #units in K
+
+    if boxlocation == 'internalpump': #case V in O3S-DQA guide
+        df['deltat'] = 0 #units in K
+        df['unc_tpump'] = 0 #units in K
+
+    df.loc[(df[pair] > 3), 'deltat_ppi'] = 3.9 - 0.8 * np.log10(df.loc[(df[pair] > 3), pair])
+    df.loc[(df[pair] > 3), 'unc_deltat_ppi'] = 0.5
+
+    df['TempTrue'] = df[temp] + df['deltat'] + df['deltat_ppi']
+    df['unc_TempTrue'] = df['TempTrue'] * np.sqrt((df[unc_temp]**2/df[temp]**2) + (df['unc_deltat']**2/df['deltat']**2)
+                                                  + (df['unc_deltat_ppi']**2/df['deltat_ppi']**2))
+
+    return df['TempTrue'],  df['unc_TempTrue']
+
 
 
 def conversion_absorption(df, pair, solvolume):
