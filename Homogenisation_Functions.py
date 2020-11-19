@@ -14,7 +14,7 @@ import datetime
 
 pval = np.array([1000, 200, 100, 50, 30, 20, 10, 7, 5, 3])
 
-komhyr_86 = np.array([1, 1.007, 1.018, 1.022, 1.032, 1.055, 1.070, 1.092, 1.124]) #ECC Komhyr
+komhyr_86 = np.array([1, 1.007, 1.018, 1.022, 1.032, 1.055, 1.070, 1.092, 1.124]) #SP Komhyr
 komhyr_95 = np.array([1, 1.007, 1.018, 1.029, 1.041, 1.066, 1.087, 1.124, 1,241]) #ECC Komhyr
 john_02 = np.array([1, 1.035, 1.052, 1.072, 1.088, 1.145, 1.200, 1.1260, 1]) #ECC Johnson
 sbrecht_98 = np.array([1, 1.027, 1.075, 1.108, 1.150, 1.280, 1.5, 1.8, 1]) #BM Steinbrecht
@@ -214,6 +214,73 @@ def conversion_efficiency(df, alpha_o3, alpha_unc, rstoich, rstoich_err, boolsst
         df['unc_eta'] = df['eta_c'] * np.sqrt((alpha_unc / df[alpha_o3]) ** 2 + (stoich_unc / stoich) ** 2 + (rstoich_err / rstoich) ** 2)
 
     return df['eta_c'], df['unc_eta']
+
+def formulacurrenttopo3(df, current,tpump, ib, etac, phip, po3):
+    """
+    :param df:
+    :param current:
+    :param pair:
+    :param tpump:
+    :param ib:
+    :param etac:
+    :param phip:
+    :param po3:
+    :return:
+    """
+    df[po3] = 0.043085 * df[tpump] * (df[current] - df[ib]) / (df[etac] * df[phip])
+
+    return df[po3]
+
+def currenttopo3(df, current, pair,  tpump, ib, etac, phip, pumpcorrectiontag, boolcorrection, po3):
+    '''
+    :param df: dataframe
+    :param current: corresponding current of the sonde
+    :param pair:pressure of the air
+    :param tpumo: pump temperature
+    :param ib: background current, question: which one?
+    :param etac: conversion efficiency
+    :param phip: gas volume flow rate in cm3^3/s
+    :param pumpcorrectiontag: pump flow correction factor applied depending on ecc type
+    :param boolcorrection: a boolean for if any other correction is applied
+    :return: PO3 obtained from current
+    '''
+
+    pump_corr = np.zeros(len(RS41_pval))
+
+    if pumpcorrectiontag == 'RS41':
+        for j in range(len(RS41_pval) - 1):
+            if (boolcorrection == False):
+                df.loc[(df[current] == 0), po3] = 0
+                df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), po3] = 0.043085 * \
+                df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), tpump] *(df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), current] - df.loc[(df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1]), ib] )
+
+                # print((dfd[o3] * dfd[etac] * dfd[phip]) /(RS41_cor[j] * (dfd[tpump] + 273) * 0.043085) + dfd[ib])
+    # else:
+    #     for i in range(len(pval)-1):
+    #         df[df.o3 == 0].imc = 0
+    #
+    #         if (boolcorrection == False):
+    #             dfd = df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])]
+    #
+    #             if pumpcorrectiontag == 'komhyr_86':
+    #                 df.loc[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1]),imc] = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                                      (komhyr_86[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #             if pumpcorrectiontag == 'komhyr_95':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (komhyr_95[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #             if pumpcorrectiontag == 'john_02':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (john_02[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #             if pumpcorrectiontag == 'sbrecht_98':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (sbrecht_98[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+    #
+    #             if pumpcorrectiontag == 'kob_66':
+    #                 df[(df[pair] < pval[i]) & (df[pair] >= pval[i + 1])].imc = (dfd.o3 * dfd.etac * dfd.phip) / \
+    #                                                                            (kob_66[i] * (dfd.tpump + 273) * 0.043085) + dfd.ib
+
+    return df[imc]
+
 
 
 #############

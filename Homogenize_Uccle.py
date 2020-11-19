@@ -5,24 +5,15 @@ from woudc_extcsv import load, WOUDCExtCSVReaderError
 import pandas as pd
 import glob
 
-station = 'Uccle'
+df = pd.read_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Uccle/UccleDataRaw.csv')
 
-allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/raw/*raw.txt")
+datelist = np.array(df.Datenf.tolist())
 
 list_data = []
+dft = {}
 
-columnString = "Time P T U Height O3 Tbox I Winddir Windv"
-columnStr = columnString.split(" ")
+for d in range(len(datelist)):
 
+    dft[d] = df[df.Date == datelist[d]]
+    dft[d] = dft[d].reset_index()
 
-for filename in allFiles:
-
-    df = pd.read_csv(filename, sep = "\s *", engine="python", skiprows=1, names=columnStr)
-
-    list_data.append(df)
-
-df = pd.concat(list_data,ignore_index=True)
-
-
-
-df.to_csv("/home/poyraden/Analysis/Uccle_Deconvolution/Files/UccleData.csv")
