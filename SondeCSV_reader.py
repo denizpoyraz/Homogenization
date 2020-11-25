@@ -8,19 +8,16 @@ import glob
 station = 'Madrid'
 efile = open("errorfile_" + station + ".txt", "w")
 
-
-# allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/19960219*csv")
-allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/CSV/*.csv")
+allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/WOUDC/*.csv")
 
 list_data = []
 list_udata = []
 dfm = pd.DataFrame()
 fi = 0
 
-
 for filename in allFiles:
 
-    print(filename)
+    # print(filename)
     # try except is applied for the cases when there is formatting error: WOUDCExtCSVReaderError
     try:
         extcsv_to = load(filename)
@@ -87,6 +84,13 @@ for filename in allFiles:
     df['Station'] = dfm.at[fi, 'DATA_GENERATION_Agency']
     list_data.append(df)
 
+    filenamestr = filename.split('/')[8].split('.csv')[0] + '_out'
+    metastr = filename.split('/')[8].split('.csv')[0] + '_metadata'
+
+    df.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/CSV/" + filenamestr + ".csv")
+    dfmt = dfm[fi:fi+1]
+    dfmt.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/CSV/" + metastr + ".csv")
+
     fi = fi + 1
     #
     # dfprofile_uncertainity = StringIO(Profile_uncertainity)
@@ -98,6 +102,6 @@ efile.close()
 dff = pd.concat(list_data,ignore_index=True)
 # dfu = pd.concat(list_udata,ignore_index=True)
 
-dff.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_All.csv")
-# dfu.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_1996_unc.csv")
 dfm.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_All_metadata.csv")
+dff.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_All.h5', key='df', mode='w')
+
