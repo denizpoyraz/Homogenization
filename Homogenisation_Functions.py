@@ -60,45 +60,59 @@ def pf_groundcorrection(df, phim, unc_phim, tlab, plab, rhlab, out, unc_out):
     return df[out], df[unc_out]
 
 
-def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, out, unc_out):
+def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, effmethod, out, unc_out):
     """
     :param df:
     :param pair:
     :param phip:
     :param pumpcorrectiontag:
+    :param effmethod:
     :return: df[phipcor], df[unc_phip]
+
     """
 
-    if pumpcorrectiontag == 'RS41':
-        for j in range(len(RS41_pval) - 1):
-            filt = (df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1])
-            df.loc[filt,out] = df.loc[filt, phip] / RS41_cor[j]
-            df.loc[filt, 'unc_phipcor'] = 0
+    if effmethod == 'polyfit':
 
-    else:
-        for i in range(len(pval) - 1):
-            filt = (df[pair] < pval[i]) & (df[pair] >= pval[i + 1])
+        if pumpcorrectiontag == 'komhyr_95':
 
-            if pumpcorrectiontag == 'komhyr_86':
-                df.loc[filt,out] = df.loc[filt, phip] / komhyr_86[i]
-                df.loc[filt, 'unc_phipcor'] = komhyr_86_unc[i]
-            if pumpcorrectiontag == 'komhyr_95':
-                print(i, 'komhyr 95', pval[i],  pval[i + 1],  komhyr_95[i])
-                df.loc[filt,out] = df.loc[filt, phip] / komhyr_95[i]
-                df.loc[filt, 'unc_phipcor'] = komhyr_95_unc[i]
-            if pumpcorrectiontag == 'john_02':
-                df.loc[filt,out] = df.loc[filt, phip] / john_02[i]
-                df.loc[filt, 'unc_phipcor'] = john_02_unc[i]
-            if pumpcorrectiontag == 'sbrecht_98':
-                df.loc[filt,out] = df.loc[filt, phip] / sbrecht_98[i]
-                df.loc[filt, 'unc_phipcor'] = sbrecht_98_unc[i]
-            if pumpcorrectiontag == 'kob_66':
-                df.loc[filt,out] = df.loc[filt, phip] / kob_66[i]
-                df.loc[filt, 'unc_phipcor'] = kob_66_unc[i]
+            df['PCF'] = 2.17322861 - 3.686021555 * np.log10(df[pair]) + 5.105113826 * (
+                np.log10(df[pair])) ** 2 - 3.741595297 * (np.log10(df[pair])) ** 3 + 1.496863681 * (np.log10(df[pair])) ** 4 - \
+                        0.3086952232 * (np.log10(df[pair])) ** 5 + 0.02569158956 * (np.log10(df[pair])) ** 6
+            df[out] = df[phip]/df['PCF']
+            df['unc_phipcor'] = 0
+
+    if effmethod == 'table':
+
+        if pumpcorrectiontag == 'RS41':
+            for j in range(len(RS41_pval) - 1):
+                filt = (df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1])
+                df.loc[filt,out] = df.loc[filt, phip] / RS41_cor[j]
+                df.loc[filt, 'unc_phipcor'] = 0
+
+        else:
+            for i in range(len(pval) - 1):
+                filt = (df[pair] < pval[i]) & (df[pair] >= pval[i + 1])
+
+                if pumpcorrectiontag == 'komhyr_86':
+                    df.loc[filt,out] = df.loc[filt, phip] / komhyr_86[i]
+                    df.loc[filt, 'unc_phipcor'] = komhyr_86_unc[i]
+                if pumpcorrectiontag == 'komhyr_95':
+                    print(i, 'komhyr 95', pval[i],  pval[i + 1],  komhyr_95[i])
+                    df.loc[filt,out] = df.loc[filt, phip] / komhyr_95[i]
+                    df.loc[filt, 'unc_phipcor'] = komhyr_95_unc[i]
+                if pumpcorrectiontag == 'john_02':
+                    df.loc[filt,out] = df.loc[filt, phip] / john_02[i]
+                    df.loc[filt, 'unc_phipcor'] = john_02_unc[i]
+                if pumpcorrectiontag == 'sbrecht_98':
+                    df.loc[filt,out] = df.loc[filt, phip] / sbrecht_98[i]
+                    df.loc[filt, 'unc_phipcor'] = sbrecht_98_unc[i]
+                if pumpcorrectiontag == 'kob_66':
+                    df.loc[filt,out] = df.loc[filt, phip] / kob_66[i]
+                    df.loc[filt, 'unc_phipcor'] = kob_66_unc[i]
 
     df[unc_out] = df[phip] * np.sqrt((df[unc_phip] / df[phip]) ** 2 + (df['unc_phipcor'] / df[out]) ** 2)
 
-    return df[out], df[out]
+    return df[out], df[unc_out]
 
 
 def background_correction(df, ib, out, unc_out):
