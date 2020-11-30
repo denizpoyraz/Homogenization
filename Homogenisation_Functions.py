@@ -76,10 +76,14 @@ def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, effmeth
         if pumpcorrectiontag == 'komhyr_95':
 
             df['PCF'] = 2.17322861 - 3.686021555 * np.log10(df[pair]) + 5.105113826 * (
-                np.log10(df[pair])) ** 2 - 3.741595297 * (np.log10(df[pair])) ** 3 + 1.496863681 * (np.log10(df[pair])) ** 4 - \
+                np.log10(df[pair])) ** 2 - 3.741595297 * (np.log10(df[pair])) ** 3 + 1.496863681 * (np.log10(df[pair]))**4 - \
                         0.3086952232 * (np.log10(df[pair])) ** 5 + 0.02569158956 * (np.log10(df[pair])) ** 6
+            df['dPCF'] = 0.07403603165-0.08532895578*np.log10(df[pair])+0.03463984997*(np.log10(df[pair]))**2 - 0.00462582698 *(np.log10(df[pair]))**3
+
             df[out] = df[phip]/df['PCF']
-            df['unc_phipcor'] = 0
+            # df['unc_phipcor'] = df['dPCF']**2/df['PCF']**2
+            df[unc_out] = df[unc_phip]**2 + df['dPCF']**2/df['PCF']**2
+
 
     if effmethod == 'table':
 
@@ -110,19 +114,19 @@ def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, effmeth
                     df.loc[filt,out] = df.loc[filt, phip] / kob_66[i]
                     df.loc[filt, 'unc_phipcor'] = kob_66_unc[i]
 
-    df[unc_out] = df[phip] * np.sqrt((df[unc_phip] / df[phip]) ** 2 + (df['unc_phipcor'] / df[out]) ** 2)
+    # df[unc_out] = df[phip] * np.sqrt((df[unc_phip] / df[phip]) ** 2 + (df['unc_phipcor'] / df[out]) ** 2)
 
     return df[out], df[unc_out]
 
 
-def background_correction(df, ib, out, unc_out):
+def background_correction(df, dfmeta, ib, out, unc_out):
     """
     :param df:
     :param ib2:
     :return: df[ib]
     """
-    median = np.median(df[df[ib] < 0.1][ib])
-    std = np.std(df[df[ib] < 0.1][ib])
+    median = np.median(dfmeta[dfmeta[ib] < 0.1][ib])
+    std = np.std(dfmeta[dfmeta[ib] < 0.1][ib])
 
     df.loc[(df[ib] > median + 2 * std) | (df[ib] < median - 2 * std), out] = median
     df.loc[(df[ib] <= median + 2 * std) & (df[ib] >= median - 2 * std), out] = df.loc[(df[ib] <= median + 2 * std) & (df[ib] >= median - 2 * std), ib]
@@ -211,10 +215,12 @@ def pumptemp_corr(df, boxlocation, temp, unc_temp, pair, out, unc_out):
     df.loc[(df[pair] > 3), 'unc_deltat_ppi'] = 0.5
 
     df.loc[filt, out] = df.loc[filt, temp] + df.loc[filt, 'deltat'] + df.loc[filt, 'deltat_ppi']
-    df.loc[filt, unc_out] = df.loc[filt, out] * np.sqrt(
-        (df.loc[filt, unc_temp] ** 2 / df.loc[filt, temp] ** 2) +
-        (df.loc[filt, 'unc_deltat'] ** 2 / df.loc[filt, 'deltat'] ** 2)
-        + (df.loc[filt, 'unc_deltat_ppi'] ** 2 / df.loc[filt, 'deltat_ppi'] ** 2))
+    df.loc[filt, unc_out] = (df.loc[filt, unc_temp] ** 2 / df.loc[filt, temp] ** 2) + \
+                            (df.loc[filt, 'unc_deltat'] ** 2 / df.loc[filt, temp] ** 2)+ (df.loc[filt, 'unc_deltat_ppi'] ** 2 / df.loc[filt, temp] ** 2)
+    # df.loc[filt, unc_out] = df.loc[filt, out] * np.sqrt(
+    #     (df.loc[filt, unc_temp] ** 2 / df.loc[filt, temp] ** 2) +
+    #     (df.loc[filt, 'unc_deltat'] ** 2 / df.loc[filt, temp] ** 2)
+    #     + (df.loc[filt, 'unc_deltat_ppi'] ** 2 / df.loc[filt, temp] ** 2))
 
     df = df.drop(['deltat', 'unc_deltat', 'deltat_ppi', 'unc_deltat_ppi'], axis=1)
 
