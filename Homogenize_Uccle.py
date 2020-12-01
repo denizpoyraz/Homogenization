@@ -17,6 +17,8 @@ from Homogenisation_Functions import po3tocurrent, conversion_absorption, conver
 station = 'Uccle'
 k = 273.15
 
+# efile = open("/home/poyraden/Analysis/Homogenization_Analysis/Files/Uccle/errorfile_" + station + ".txt", "w")
+
 
 ##Uccle metadata
 columnMeta = ['mDate', 'mRadioSondeNr', 'PF', 'iB0', 'iB1', 'CorrectionFactor', 'SondeNr', 'InterfaceNr', 'DateTime',
@@ -28,10 +30,12 @@ dfmeta['DateTime'] = dfmeta['mDate'].apply(lambda x: pd.to_datetime(str(x), form
 dfmeta['Datenf'] = dfmeta['DateTime'].apply(lambda x: x.strftime('%Y%m%d'))
 # special data cleaning for metadata
 dfmeta = dfmeta[dfmeta.Datenf >= '19970101']  # only for dates after 1997
-dfmeta = dfmeta[dfmeta.iB0 > -1] # clean iB) values which are not realistic
+dfmeta = dfmeta.reset_index()
+dfmeta  = dfmeta.drop(['index'], axis=1)
 
 
-allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/raw/970*")
+
+allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/raw/*"))
 
 columnString0 = "Time Height P T U Tbox O3 Winddir Windv"
 columnString1 = "Time P T U Height O3 Tbox I Winddir Windv"
@@ -50,9 +54,10 @@ for filename in allFiles:
     date_tmp = filename.split('/')[8].split('raw.')[0]
     date = datetime.strptime(date_tmp, '%y%m%d%H%M')
     datef = date.strftime('%Y%m%d')
-    print(filename, datef)
 
-    if datef < '20070101':
+    # if datef < '20071214': continue #last file that was read
+
+    if datef < '20061231':
         columnStr = columnString0.split(" ")
     if (datef > '20061231') & (datef < '20160416'):
         columnStr = columnString1.split(" ")
@@ -62,17 +67,32 @@ for filename in allFiles:
     if datef >= '20160917':
         columnStr = columnString3.split(" ")
 
-    df = pd.read_csv(filename, sep="\s *", engine="python", skiprows=3, names=columnStr)
+    df = pd.read_csv(filename, sep="\s *", engine="python", skiprows=2, names=columnStr)
+
+    # to deal with data that is not complete
+    if (len(df) < 50):
+        efile.write('length of df ' + datef  + '\n')
+        continue
 
     df['Date'] = datef
     df['Datedt'] = pd.to_datetime(df['Date'], format='%Y%m%d').dt.date
-    # print(df.at[df.first_valid_index(), 'Date'], df.at[df.first_valid_index(), 'Datedt'] )
 
     ind = df.first_valid_index()
-    select_indices = list(np.where(dfmeta["Datenf"] == df.at[ind, 'Date']))[0]
+
+    # to deal with metada that is missing
+    try:
+        select_indices = list(np.where(dfmeta["Datenf"] == df.at[ind, 'Date']))[0]
+    except KeyError:
+        print('KeyError', datef)
+        efile.write('KeyError ' + datef  + '\n')
+
+    if len(select_indices) == 0:
+        print('no index', datef)
+        efile.write('no index' + datef  + '\n')
+        continue
+
     common = [i for i in select_indices if i in select_indices]
     mindex = common[0]
-    print(mindex, type(mindex))
     df['PF'] = dfmeta.at[mindex, 'PF']
     df['iB0'] = dfmeta.loc[mindex, 'iB0']
 
@@ -100,9 +120,12 @@ for filename in allFiles:
 
     df['Phip_cor'], df['dPhi_cor'] = pf_efficiencycorrection(df, 'P', 'Phip_ground', 'dPhip_gr', 'komhyr_95', 'polyfit',
                                                             'Phip_cor', 'dPhi_cor')
-
-    df['Tpump_cor'], df['dTpump_cor'] = pumptemp_corr(df, 'internalpump', 'Tpump', 'unc_Tpump', 'P', 'Tpump_cor',
+    try:
+        df['Tpump_cor'], df['dTpump_cor'] = pumptemp_corr(df, 'internalpump', 'Tpump', 'unc_Tpump', 'P', 'Tpump_cor',
                                                         'dTpump_cor')
+    except ValueError:
+        print('ValueError', datef)
+
     df['iBc'], df['unc_iB0'] = background_correction(df, dfmeta, 'iB0', 'iBc', 'unc_iB0')
     df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'Eta', 'Phip_cor', False, 'O3c')
 
@@ -113,11 +136,7 @@ for filename in allFiles:
     df['dIall'] = (df['dI']**2 + df['unc_iB0']**2)/(df['I'] - df['iB0'])**2
     # unc_eta = (DeltaEtac/Etac)**2
     df['dEta'] = 0.0013
-    # unc_phipground = (DeltaPhipGround/PhipGround)**2
-    # df['dPhig'] = 0.000400
-    # # dPhip = (DeltaPhip / Phip) ** 2
-    # df['dPhip'] = df['dPhig'] + df['unc_eff']
-
+    # final uncertainity on O3
     df['dO3'] = np.sqrt(df['dIall'] + df['dEta'] + df['dPhi_cor'] + df['dTpump_cor'])
 
     df.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Uccle/DQA/All/" + datef + "_all.csv")
@@ -127,18 +146,18 @@ for filename in allFiles:
     df['iB0'] = df['iBc']
     df['O3'] = df['O3c']
 
-    # print(list(df))
-
-    df = df.drop(['Tpump', 'unc_Tpump', 'Phip', 'unc_Phip', 'Eta', 'dPhip_meas', 'Phip_ground', 'unc_phix', 'unc_phipgr', 'dPhip_gr', 'PCF',
+    df = df.drop(['Tpump', 'unc_Tpump', 'Phip', 'unc_Phip', 'Eta', 'dPhip_meas', 'Phip_ground', 'unc_phix', 'unc_phipgr', 'dPhip_gr', 'PCF', 'Winddir', 'Windv',
                   'dPCF', 'Phip_cor', 'dPhi_cor', 'deltat', 'unc_deltat', 'deltat_ppi', 'unc_deltat_ppi', 'Tpump_cor', 'dTpump_cor', 'iBc', 'unc_iB0', 'O3c', 'dIall', 'dEta'], axis=1)
 
+    if (datef >= '20160610') & (datef < '20160917'):
+        df = df.drop(['V', 'Lat', 'Lon', 'GPSHeightMSL', 'Dewp', 'AscRate'], axis=1)
+    if datef >= '20160917':
+        df = df.drop(['V', 'PumpCurrent',  'Lat', 'Lon', 'GPSHeightMSL', 'Dewp', 'AscRate'], axis=1)
+
     df.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Uccle/DQA/Corrected/" + datef + "_dqa.csv")
-
-    # print(list(df))
-
-    ## uncertanities need to implemented
-
     list_data.append(df)
+
+efile.close()
 
 # Merging all the data files to df
 dfn = pd.concat(list_data, ignore_index=True)
