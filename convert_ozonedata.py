@@ -113,7 +113,8 @@ def extract_constants_from_header(text: str) -> Dict[str, float]:
         (^[\s\S]+?)
         ^\d[\s\S]+?
         (^                                    # Numbers separated by whitespace only
-          \s*\d{3}                            # Line starts with spaces (optional) then 3 digits (pressure levels)
+          \s*\d{3}                             # Line starts with spaces (optional) then 3 digits (pressure levels)
+          [^\n]                        # should not be a new line after 3 digits
           [-\d\.\s]{10,}
           [\s\S]*
         $)      
@@ -121,19 +122,21 @@ def extract_constants_from_header(text: str) -> Dict[str, float]:
     variables, values = pattern.search(text).groups()
     variables = variables.split("\n")
     variables = [v for v in variables if len(v) > 0]
+    # print(len(variables), variables)
     values = values.split('\n')
     cleaned_values = []
     for v in values:
         # Remove leading spaces
         v = v.lstrip('File').lstrip()
+        # print(v)
         if len(v) == 0:
             continue
         # don't split text values (contains any letter that is not E used in exponential numbers)
-        if re.search('(?!E)[a-zA-Z]', v):
+        if re.search('(?!e)(?!E)[a-zA-Z]', v):
             cleaned_values.append(v)
         else:
             cleaned_values.extend(v.split())
-
+    # print(len(cleaned_values), cleaned_values)
     constants = dict(zip(variables, cleaned_values))
     return constants
 

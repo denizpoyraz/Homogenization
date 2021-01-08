@@ -9,9 +9,9 @@ class TestOzoneDataConverter(TestCase):
 
     def setUp(self):
         self.files = [
-            Path.cwd() / 'data' / 'so191121.q12',
-            Path.cwd() / 'data' / 'uc181205.b11',
-            Path.cwd() / 'data' / 'so190918.z09'
+            # Path.cwd() / 'data' / 'so191121.q12',
+            # Path.cwd() / 'data' / 'uc181205.b11',
+            Path.cwd() / 'data' / 'SO030507.Q12'
 
         ]
 
