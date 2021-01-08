@@ -5,7 +5,7 @@ from woudc_extcsv import load, WOUDCExtCSVReaderError
 import pandas as pd
 import glob
 
-station = 'Madrid'
+station = 'Sodonkyla'
 efile = open("errorfile_" + station + ".txt", "w")
 
 allFiles = glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/" + station + "/WOUDC/*.csv")
@@ -103,5 +103,5 @@ dff = pd.concat(list_data,ignore_index=True)
 # dfu = pd.concat(list_udata,ignore_index=True)
 
 dfm.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_All_metadata.csv")
-dff.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_All.h5', key='df', mode='w')
+dff.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_' + station + '_All.h5', key='df', mode='w')
 

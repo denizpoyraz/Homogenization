@@ -71,7 +71,7 @@ for filename in allFiles:
 
     # to deal with data that is not complete
     if (len(df) < 50):
-        efile.write('length of df ' + datef  + '\n')
+        #efile.write('length of df ' + datef  + '\n')
         continue
 
     df['Date'] = datef
@@ -84,11 +84,11 @@ for filename in allFiles:
         select_indices = list(np.where(dfmeta["Datenf"] == df.at[ind, 'Date']))[0]
     except KeyError:
         print('KeyError', datef)
-        efile.write('KeyError ' + datef  + '\n')
+        #efile.write('KeyError ' + datef  + '\n')
 
     if len(select_indices) == 0:
         print('no index', datef)
-        efile.write('no index' + datef  + '\n')
+        #efile.write('no index' + datef  + '\n')
         continue
 
     common = [i for i in select_indices if i in select_indices]
@@ -157,7 +157,7 @@ for filename in allFiles:
     df.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/Uccle/DQA/Corrected/" + datef + "_dqa.csv")
     list_data.append(df)
 
-efile.close()
+#efile.close()
 
 # Merging all the data files to df
 dfn = pd.concat(list_data, ignore_index=True)
