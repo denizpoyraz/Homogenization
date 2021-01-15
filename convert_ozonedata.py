@@ -39,6 +39,8 @@ def convert_ozonedata(files: List[Path]) -> None:
         df = get_data(file, header)
         # Write data to hdf and metadata to csv
         constants = extract_constants_from_header(header.meta_data)
+        dfm = extract_constants_from_header(header.meta_data)
+
         # pd.Series(constants).to_csv(file.with_suffix('.csv'), header=False)
         filename = str(file)
         filename = filename.split(".")[-2] + ('_md.csv')
@@ -52,6 +54,8 @@ def convert_ozonedata(files: List[Path]) -> None:
         # print(filename)
         # print(path, df_name, md_name)
         pd.Series(constants).to_csv(filename, header=False)
+        # dfm.to_csv(filename, header=False)
+        # dfm.to_csv(filename)
 
         df.to_hdf(file.with_suffix('.hdf'), key='df')
         df.to_csv(file.with_suffix('.csv'))
@@ -100,13 +104,6 @@ def compile_regexp() -> re.Pattern:
         (^[-\d\.\s]{1000,}$)                # Numbers separated by whitespace only
         ''', re.VERBOSE|re.MULTILINE)
 
-# def compile_regexp_deniz() -> re.Pattern:
-#     return re.compile(r'''
-#         ^[z\s]{2,}\n                        # z characters
-#         ([\s\S]+?)                          # Metadata
-#         (^[-\d\.\s]{1000,}$)                # Numbers separated by whitespace only
-#         ''', re.VERBOSE|re.MULTILINE)
-
 
 def extract_constants_from_header(text: str) -> Dict[str, float]:
     pattern = re.compile(r'''
@@ -138,6 +135,7 @@ def extract_constants_from_header(text: str) -> Dict[str, float]:
             cleaned_values.extend(v.split())
     # print(len(cleaned_values), cleaned_values)
     constants = dict(zip(variables, cleaned_values))
+    # df = pd.DataFrame([cleaned_values], columns=variables)
     return constants
 
 
