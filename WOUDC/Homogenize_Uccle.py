@@ -17,9 +17,6 @@ from Homogenisation_Functions import po3tocurrent, conversion_absorption, conver
 station = 'Uccle'
 k = 273.15
 
-# efile = open("/home/poyraden/Analysis/Homogenization_Analysis/Files/Uccle/errorfile_" + station + ".txt", "w")
-
-
 ##Uccle metadata
 columnMeta = ['mDate', 'mRadioSondeNr', 'PF', 'iB0', 'iB1', 'CorrectionFactor', 'SondeNr', 'InterfaceNr', 'DateTime',
               'Datenf']
@@ -98,10 +95,12 @@ for filename in allFiles:
 
     ##input variables for hom.
     df['Tpump'] = df['Tbox'] + k
-    df['unc_Tpump'] = 1
     df['Phip'] = 100 / df['PF']
-    df['unc_Phip'] = 0
     df['Eta'] = 1
+
+    df['unc_Phip'] = 0
+    df['unc_Tpump'] = 1
+
     Tlab = 20 + k
     ## calculation of I for the data before 2007
     if datef < '20070101':

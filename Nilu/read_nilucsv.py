@@ -3,12 +3,14 @@ import glob
 import math
 import numpy as np
 from re import search
-
+from datetime import datetime
 
 
 __MissingData__ = -32768.0
 K = 273.15
+station = 'Uccle'
 
+# efile = open("errorfile_" + station + ".txt", "w")
 
 # SensorType = 'SPC-6A'
 VecP_ECC6A =    [    0,     2,     3,      5,    10,    20,    30,    50,   100,   200,   300,   500, 1000, 1100]
@@ -30,8 +32,8 @@ def o3tocurrent(df):
     # cref: additional correction factor
     # i = o3 / (4.3087 * 10e-4 * tp * t * cef * cref ) + ibg
 
-    ensci = df.SensorType == 'DMT-Z'
-    spc = df.SensorType != 'DMT-Z'
+    ensci = (df.SensorType == 'DMT-Z') | (df.SensorType == 'ECC6Z')
+    spc = df.SensorType == 'SPC-6A'
 
     df['Cef'] = ComputeCef(df)
     cref = 1
@@ -41,8 +43,7 @@ def o3tocurrent(df):
     df.loc[ensci, 'CalibrationPressureCorrected'] = 1
 
     df.loc[spc, 'CalibrationPressureCorrected'] = ComputeCorP(df[spc], df.loc[spc, 'Pground'] )
-    df.loc[spc, 'ibg'] = \
-        ComputeIBG(df[spc])
+    df.loc[spc, 'ibg'] = ComputeIBG(df[spc])
     # , 'CalibrationPressureCorrected'], df.loc[spc, 'Pair'], df.loc[spc, 'iB0'])
     df.loc[ensci,'I'] = df.loc[ensci,'O3'] / \
                                        (4.3087 * 10**(-4) * df.loc[ensci,'Tbox'] * df.loc[ensci, 'PF'] * df.loc[ensci,'Cef'] * cref) + df.loc[ensci,'ibg']
@@ -59,18 +60,13 @@ def ComputeCef(df):
     spc = df.SensorType == 'SPC-6A'
     sol3 = df.SolutionVolume.astype(float) >= 2.75
     sol2 = df.SolutionVolume.astype(float) < 2.75
-    ensci = df.SensorType == 'DMT-Z'
-    # df[(spc) & (sol3)].Cef = \
-    #     VecInterpolate(VecP_ECC6A, VecC_ECC6A_30, df[(spc) & (sol3)].Pair, 0)
-    # df.loc[(spc) & (sol2), 'Cef'] = \
-    #     VecInterpolate(VecP_ECC6A, VecC_ECC6A_25, df.loc[(spc) & (sol2),'Pair'], 0)
+    ensci = (df.SensorType == 'DMT-Z') | (df.SensorType == 'ECC6Z')
+
+    df.loc[(spc) & (sol3), 'Cef'] = \
+        VecInterpolate(VecP_ECC6A, VecC_ECC6A_30, df.loc[(spc) & (sol3), 'Pair'], 0)
+    df.loc[(spc) & (sol2), 'Cef'] = \
+        VecInterpolate(VecP_ECC6A, VecC_ECC6A_25, df.loc[(spc) & (sol2),'Pair'], 0)
     df.loc[ensci,'Cef'] = VecInterpolate(VecP_ECCZ, VecC_ECCZ, df.loc[ensci,'Pair'], 0)
-    # print(df[ensci].Cef)
-    # df[(df.SensorType == 'SPC-6A') & (df.SolutionVolume > 2.75)].Cef = \
-    #     VecInterpolate(VecP_ECC6A, VecC_ECC6A_30, df[(df.SensorType == 'SPC-6A') & (df.SolutionVolume > 2.75)].Pair, 0)
-    # df[(df.SensorType == 'SPC-6A') & (df.SolutionVolume < 2.75)].Cef = \
-    #     VecInterpolate(VecP_ECC6A, VecC_ECC6A_25, df[(df.SensorType == 'SPC-6A') & (df.SolutionVolume < 2.75)].Pair, 0)
-    # df[df.SensorType == 'DMT-Z'].Cef = VecInterpolate(VecP_ECCZ, VecC_ECCZ, df[df.SensorType == 'DMT-Z'], 0)
 
     return df.Cef
 
@@ -89,14 +85,9 @@ def VecInterpolate(XValues, YValues, dft, LOG):
     for k in range(len(dft)):
 
         for i in range(len(XValues)-1):
-        # while i <= ilast:
-
             # just check that value is in between xvalues
-            # if (XValues[i] <= dft.at[k, 'Pair'] <= XValues[i+1]) or (XValues[i+1] <= dft.at[k, 'Pair'] <= XValues[i]):
             if (XValues[i] <= dft.at[k, 'Pair'] <= XValues[i + 1]):
 
-                # print('x values', i, XValues[i - 1], XValues[i] )
-                # dft.x = float(dft.Pair)
                 x1 = float(XValues[i])
                 x2 = float(XValues[i+1])
                 if LOG == 1:
@@ -109,8 +100,7 @@ def VecInterpolate(XValues, YValues, dft, LOG):
                 dft.at[k,'Cef'] = y1 + (dft.at[k,'Pair'] - x1) * (y2 - y1) / (x2 - x1)
                 dft.at[k,'y'] = y1 + (dft.at[k,'Pair'] - x1) * (y2 - y1) / (x2 - x1)
                 # print(k, dft.at[k,'Pair'], y1 + (dft.at[k,'Pair'] - x1) * (y2 - y1) / (x2 - x1))
-                # break
-            # i += 1
+
     return dft['Cef']
 
 def ComputeIBG(df):
@@ -122,9 +112,9 @@ def ComputeIBG(df):
       Pressure                      -- air pressure [hPa]
       iB0                            -- background current
   """
-
   df.Pcor = ComputeCorP(df, 'Pair') / ComputeCorP(df, 'Pground')
   df.IBG = df.Pcor*df.iB0
+
   return df.IBG
 
 
@@ -134,9 +124,11 @@ def ComputeCorP(df, Pressure):
   A1 = 0.000124111475632
   A2 = -0.00000002687066130
   df.CorP = A0 + A1*df[Pressure] + A2*df[Pressure]*df[Pressure]
+
   return df.CorP
 
 def organize_df(df1, df2):
+
 
     df_out = pd.DataFrame()
     # print(list(df2))
@@ -148,24 +140,41 @@ def organize_df(df1, df2):
         if (search('Time', list1[i])) and (search('after', list1[i])):
             time = list1[i]
             df_out['Time'] = df1[time]
-
+        if (search('Geopotential', list1[i])) and (search('height', list1[i])):
+            height = list1[i]
+            df_out['Height'] = df1[height]
 
     list2 = list(df2)
-
     for j in range(len(list2)):
         if (search('Background', list2[j])) and (search('end', list2[j])) and (search('pre-flight', list2[j])) :
             bkg = list2[j]
             df_out['BgCurrent'] = df2.at[df2.first_valid_index(), bkg]
             df_out['iB0'] = df2.at[df2.first_valid_index(), bkg]
-
-            # print('bkg', bkg, df2.at[df2.first_valid_index(), bkg])
+            if(float(df2.at[df2.first_valid_index(), bkg]) > 1):
+                # efile.write("background: " + str(df2.at[df2.first_valid_index(), bkg]) + filename  + '\n')
+                print('background', df2.at[df2.first_valid_index(), bkg], filename)
+                df_out['BgCurrent'] = 0.03
+                df_out['iB0'] = 0.03
         if ((search('Sensor', list2[j])) and (search('air', list2[j])) and (search('flow', list2[j]))) and \
                not(search('calibrator', list2[j])):
             pumpt = list2[j]
-            # print('pumpt', pumpt)
-
             df_out['PF'] = df2.at[df2.first_valid_index(), pumpt]
 
+            if (float(df2.at[df2.first_valid_index(), pumpt]) < 25) | (float(df2.at[df2.first_valid_index(), pumpt]) > 35):
+                # efile.write("PF: " + str(df2.at[df2.first_valid_index(), pumpt]) + filename  + '\n')
+                print('PF', df2.at[df2.first_valid_index(), pumpt], filename)
+                df_out['PF'] = 29
+
+        if (search('Ozone', list2[j])) and (search('sensor', list2[j])) :
+            sensor = list2[j]
+            df_out['SensorType'] = df2.at[df2.first_valid_index(), sensor]
+            print(df2.at[df2.first_valid_index(), sensor])
+
+        if not(search('Ozone', list2[j])) and (search('sensor', list2[j])) :
+            try:
+                df_out['SensorType'] = df2.at[df2.first_valid_index(), 'Ozone sensor type']
+            except KeyError:
+                df_out['SensorType'] = 'DMT-Z'
 
 
     df_out['Pair'] = df1['Pressure at observation (hPa)']
@@ -173,38 +182,41 @@ def organize_df(df1, df2):
     # df_out['Time'] = df1['Time after launch (s)']
     df_out['T'] = df1['Temperature (C)']
     df_out['U'] = df1['Relative humidity (%)']
-    df_out['Height'] = df1['Geopotential height (gpm)']
+    # df_out['Height'] = df1['Geopotential height (gpm)']
     df_out['Pground'] = df2.at[df2.first_valid_index(),'Background surface pressure (hPa)']
+    if (float(df2.at[df2.first_valid_index(),'Background surface pressure (hPa)']) > 1200) | (float(df2.at[df2.first_valid_index(),'Background surface pressure (hPa)']) <900):
+        # efile.write("Pground: " + str(df2.at[df2.first_valid_index(), 'Background surface pressure (hPa)']) + filename + '\n')
+        print('Pground', df2.at[df2.first_valid_index(), 'Background surface pressure (hPa)'] )
+        df_out['Pground'] = 1000
+
+
     df_out['SolutionVolume'] = df2.at[df2.first_valid_index(), 'Amount of cathode solution (cm3)']
-    # df_out['BgCurrent'] = df2[bkg]
-    # df_out['Tbox'] = df1[pump_temp]
     df_out['PF'] = df_out['PF'].astype('float')
     df_out['iB0'] = df_out['iB0'].astype('float')
-
     df_out['Cef'] = 1
-    try:
-        df_out['SensorType'] = df2.at[df2.first_valid_index(), 'Ozone sensor type']
 
-    except KeyError:
-        df_out['SensorType'] = 'DMT-Z'
+    # try:
+    # df_out['SensorType'] = df2.at[df2.first_valid_index(), 'Ozone sensor type']
+    # except KeyError:
+    #     df_out['SensorType'] = 'DMT-Z'
 
 
     return df_out
 
 
-    #or
-    #df['BgCurrent'] = df1['Background sensor current before cell is exposed to ozone (microamperes)']
-    
 
-
-station = 'Uccle'
 
 ##read datafiles
 allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
 metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
 
-c=0
 for filename, metafile in zip(allFiles, metaFiles):
+
+    name = filename.split(".")[-2].split("/")[-1].split("uc")[1]
+    date = datetime.strptime(name, '%y%m%d')
+    datef = date.strftime('%Y%m%d')
+
+    # if datef < "20070514": continue
 
     dfd = pd.read_csv(filename)
     if(len(dfd) < 300): continue
@@ -212,17 +224,21 @@ for filename, metafile in zip(allFiles, metaFiles):
     dfm = dfm.T
 
     # print(filename.split(".")[-2].split("/")[-1])
-    if filename.split(".")[-2].split("/")[-1] == "uc080825": continue
+    if (name == "080825") | (name == "080702") | (name == "080704") | (name == "190214"): continue
     print(filename)
 
     dfl = pd.DataFrame()
     dfl = organize_df(dfd, dfm)
+
     dfl = o3tocurrent(dfl)
 
     rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.csv"
     pname = filename.split(".")[-2].split("uc")[0]
 
     dfl.to_csv(pname + '/Current/' + rawname)
+
+# efile.close()
+
 
 
 
