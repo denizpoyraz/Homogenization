@@ -259,25 +259,30 @@ def stoichemtry_conversion(df, pair, sensortype, solutionconcentration, referenc
     ensci05 = (df.sensortype == 'DMT-Z') & (df.solutionconcentration == 5)
     ensci10 = (df.sensortype == 'DMT-Z') & (df.solutionconcentration == 10)
 
-    df.loc[(df.sensortype == 'SPC') & (df.solutionconcentration),]
+    if (reference == 'SPC10') & (sensortype == 'SPC') & (solutionconcentration == 5):
+        df.loc[df.pair >= 30, 'r'] = 0.96
+        df.loc[df.pair < 30, 'r'] = 0.90 + 0.041 * np.log10(df[df.pair < 30])
 
-    for k in range(len(pair)):
+    if (reference == 'ENSCI05') & (sensortype == 'ENSCI') & (solutionconcentration == 10):
+        df.loc[df.pair >= 30, 'r'] = 0.96
+        df.loc[df.pair < 30, 'r'] = 0.90 + 0.041 * np.log10(df[df.pair < 30])
+    # for k in range(len(pair)):
+    #
+    #     # if sondesstone == sondessttwo: r = 1
+    #     if (sondesstone == ['SPC', 0.5]) and (sondessttwo == ['SPC', 1.0]):
+    #         if pair[k] >= 30: r = 0.96
+    #         if pair[k] < 30: r = 0.90 + 0.041 * np.log10(pair[k])
+    #     if (sondesstone == ['ENSCI', 1.0]) and (sondessttwo == ['ENSCI', 0.5]):
+    #         if pair[k] >= 30: r = 0.96
+    #         if pair[k] < 30: r = 0.90 + 0.041 * np.log10(pair[k])
+    #     if (sondesstone == ['ENSCI', 1.0]) and (sondessttwo == ['SPC', 1.0]):
+    #         if pair[k] >= 50: r = 0.96
+    #         if pair[k] < 50: r = 0.764 + 0.133 * np.log10(pair[k])
+    #     if (sondesstone == ['SPC', 0.5]) and (sondessttwo == ['ENSCI', 0.5]):
+    #         if pair[k] >= 50: r = 0.96
+    #         if pair[k] < 50: r = 0.764 + 0.133 * np.log10(pair[k])
 
-        # if sondesstone == sondessttwo: r = 1
-        if (sondesstone == ['SPC', 0.5]) and (sondessttwo == ['SPC', 1.0]):
-            if pair[k] >= 30: r = 0.96
-            if pair[k] < 30: r = 0.90 + 0.041 * np.log10(pair[k])
-        if (sondesstone == ['ENSCI', 1.0]) and (sondessttwo == ['ENSCI', 0.5]):
-            if pair[k] >= 30: r = 0.96
-            if pair[k] < 30: r = 0.90 + 0.041 * np.log10(pair[k])
-        if (sondesstone == ['ENSCI', 1.0]) and (sondessttwo == ['SPC', 1.0]):
-            if pair[k] >= 50: r = 0.96
-            if pair[k] < 50: r = 0.764 + 0.133 * np.log10(pair[k])
-        if (sondesstone == ['SPC', 0.5]) and (sondessttwo == ['ENSCI', 0.5]):
-            if pair[k] >= 50: r = 0.96
-            if pair[k] < 50: r = 0.764 + 0.133 * np.log10(pair[k])
-
-    unc_r = 0.05
+    df['unc_r'] = 0.05
 
     return r, unc_r
 
