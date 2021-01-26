@@ -227,7 +227,7 @@ def pumptemp_corr(df, boxlocation, temp, unc_temp, pair, out, unc_out):
     return df.loc[filt,out], df.loc[filt,unc_out]
 
 
-def absorption_efficiency (df, pair, solvolume):
+def conversion_absorption(df, pair, solvolume):
     '''
     :param df: dataframe
     :param pair: air pressure column
@@ -236,30 +236,29 @@ def absorption_efficiency (df, pair, solvolume):
     '''
 
     if solvolume == 2.5:
-        df.loc[(df[pair] > 100) & (df[pair] < 1050), 'alpha_o3'] = 1.0044 - 4.4 * 10 ** -5 * df.loc[(df[pair] > 100) & (df[pair] < 1050), pair]
+        df.loc[(df[pair] > 100) & (df[pair] < 1050), 'alpha_o3'] = 1.0044 - 4.4 * 10 ** -5 * df[pair]
         df.loc[(df[pair] <= 100), 'alpha_o3'] = 1.0
     if solvolume == 3.0:
         df.loc[(df[pair] <= 1050), 'alpha_o3'] = 1.0
     df['unc_alpha'] = 0.01
 
+    # for k in range(len(pair)):
+    #
+    #     if solvolume == 2.5:
+    #         if (pair[k] > 100) and (pair[k] < 1050): alpha_o3 = 1.0044 - 4.4 * 10 ** -5 * pair[k]
+    #         if pair[k] <= 100: alpha_o3 = 1.00
+    #     if (solvolume == 3.0) and (pair[k] < 1050): alpha_o3 = 1.0
 
-    return df['alpha_o3'], df['unc_alpha_o3']
+    return df['alpha_o3'], df['unc_alpha']
 
 
-def stoichemtry_conversion(df, pair, sensortype, solutionconcentration, reference):
+def conversion_stoichemtry(pair, sondesstone, sondessttwo):
     '''
     :param pair: Pressure of the air
     :param sondesstone: an array of the Sonde type and SST i.e: ['SPC', '0.5'] that was in use
     :param sondessttwo: an array of the Sonde type and SST to be changed to i.e: ['SP', '1.0']
     :return: r and uncertainity on r which are transfer functions and taken from Table 3 from the guideline
     '''
-
-    spc05 = (df.sensortype == 'SPC') & (df.solutionconcentration == 5)
-    spc10 = (df.sensortype == 'SPC') & (df.solutionconcentration == 10)
-    ensci05 = (df.sensortype == 'DMT-Z') & (df.solutionconcentration == 5)
-    ensci10 = (df.sensortype == 'DMT-Z') & (df.solutionconcentration == 10)
-
-    df.loc[(df.sensortype == 'SPC') & (df.solutionconcentration),]
 
     for k in range(len(pair)):
 

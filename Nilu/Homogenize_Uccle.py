@@ -2,13 +2,6 @@ import pandas as pd
 import numpy as np
 import re
 import glob
-import math
-from math import log
-import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
-from matplotlib.offsetbox import AnchoredText
-from math import log
-from datetime import time
 from datetime import datetime
 
 from Homogenisation_Functions import po3tocurrent, conversion_absorption, conversion_efficiency, background_correction, \
@@ -45,15 +38,6 @@ for filename in allFiles:
     df['Date'] = datef
     df['Datedt'] = pd.to_datetime(df['Date'], format='%Y%m%d').dt.date
 
-
-    ##input variables for hom.
-    df['Tpump'] = df['Tbox']
-    df['Phip'] = 100 / df['PF']
-    df['Eta'] = 1
-    df['P'] = df['Pair']
-
-    df['unc_Phip'] = 0
-    df['unc_Tpump'] = 1
 
     Tlab = 20 + k
     ## calculation of I for the data before 2007

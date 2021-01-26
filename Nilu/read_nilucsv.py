@@ -8,7 +8,7 @@ from datetime import datetime
 
 __MissingData__ = -32768.0
 K = 273.15
-station = 'Uccle'
+station = 'Sodankyl'
 
 # efile = open("errorfile_" + station + ".txt", "w")
 
@@ -24,51 +24,184 @@ VecC_MAST = [ 1.177, 1.177, 1.133, 1.088, 1.053, 1.037, 1.020, 1.004,     1,    
 VecP_ECCZ = [   0,    3,     5,     7,    10,    15,    20,    30,    50,    70,    100,   150,   200, 1100]
 VecC_ECCZ = [1.24, 1.24, 1.124, 1.087, 1.066, 1.048, 1.041, 1.029, 1.018, 1.013,  1.007, 1.002,     1,    1]
 
+def organize_df(df1, df2):
+
+    df_out = pd.DataFrame()
+    # print(list(df2))
+    list1 = list(df1)
+    for i in range(len(list1)):
+
+        if (search('Temperature', list1[i])) and (search('inside', list1[i])):
+            pump_temp = list1[i]
+            df_out['Tbox'] = df1[pump_temp] + K
+        if (search('Time', list1[i])) and (search('after', list1[i])):
+            time = list1[i]
+            df_out['Time'] = df1[time]
+        if (search('Geopotential', list1[i])) and (search('height', list1[i])):
+            height = list1[i]
+            df_out['Height'] = df1[height]
+
+    list2 = list(df2)
+    for j in range(len(list2)):
+
+        if (search('Background', list2[j])) and (search('end', list2[j])) and (search('pre-flight', list2[j])) :
+            bkg = list2[j]
+            df_out['iB2'] = df2.at[df2.first_valid_index(), bkg]
+
+            if(float(df2.at[df2.first_valid_index(), bkg]) > 0.1):
+                # efile.write("background: " + str(df2.at[df2.first_valid_index(), bkg]) + filename  + '\n')
+                print('background', df2.at[df2.first_valid_index(), bkg], filename)
+                df_out['iB2'] = 0.03
+
+        # if (search('Background', list2[j])) and (search('before', list2[j])) and (search('exposed', list2[j])) :
+        #     bkg = list2[j]
+        #     df_out['iB0'] = df2.at[df2.first_valid_index(), bkg]
+        #
+        #     if(float(df2.at[df2.first_valid_index(), bkg]) > 0.1):
+        #         print('background', df2.at[df2.first_valid_index(), bkg], filename)
+        #         df_out['iB0'] = 0.03
+
+        if ((search('Sensor', list2[j])) and (search('air', list2[j])) and (search('flow', list2[j]))) and \
+               not(search('calibrator', list2[j])):
+            pumpt = list2[j]
+            df_out['PF'] = df2.at[df2.first_valid_index(), pumpt]
+
+            if (float(df2.at[df2.first_valid_index(), pumpt]) < 20) | (float(df2.at[df2.first_valid_index(), pumpt]) > 40):
+                # efile.write("PF: " + str(df2.at[df2.first_valid_index(), pumpt]) + filename  + '\n')
+                df_out['PF'] = 29
+
+        if (search('Ozone', list2[j])) and (search('sensor', list2[j])):
+            sensor = list2[j]
+            df_out['SensorType'] = df2.at[df2.first_valid_index(), sensor]
+            # print(df2.at[df2.first_valid_index(), sensor])
+
+        if not((search('Ozone', list2[j])) and (search('sensor', list2[j]))) and (search('Serial number of ECC', list2[j])) :
+            serial = list2[j]
+            df_out['SerialECC'] = df2.at[df2.first_valid_index(), serial]
+            if (df2.at[df2.first_valid_index(), serial][0] == "z") | (df2.at[df2.first_valid_index(), serial][0] == "Z")\
+                    | (df2.at[df2.first_valid_index(), serial][1] == "Z") | (df2.at[df2.first_valid_index(), serial][1] == "z"):
+                df_out['SensorType'] = 'DMT-Z'
+            if (df2.at[df2.first_valid_index(), serial][0] == "4"): df_out['SensorType'] = 'SPC-4A'
+            if (df2.at[df2.first_valid_index(), serial][0] == "5"): df_out['SensorType'] = 'SPC-5A'
+            if (df2.at[df2.first_valid_index(), serial][0] == "6"): df_out['SensorType'] = 'SPC-6A'
+            # print(df_out.at[df_out.first_valid_index(), 'SensorType'])
 
 
-def o3tocurrent(df):
+        if (search('Background', list2[j])) and (search('surface pressure', list2[j])):
+            pground = list2[j]
+            df_out['Pground'] = df2.at[df2.first_valid_index(), pground]
+            if (float(df2.at[df2.first_valid_index(), pground]) > 1090) | (
+                    float(df2.at[df2.first_valid_index(), pground]) < 900):
+                # efile.write("Pground: " + str(df2.at[df2.first_valid_index(), 'Background surface pressure (hPa)']) + filename + '\n')
+                df_out['Pground'] = 1000
+
+        if (search('Amount', list2[j])) and (search('cathode', list2[j])):
+            cathodesol = list2[j]
+            df_out['SolutionVolume'] = df2.at[df2.first_valid_index(), cathodesol]
+
+        if (search('Concentration', list2[j])) and (search('cathode', list2[j])):
+            cathodecon = list2[j]
+            df_out['SolutionConcentration'] = df2.at[df2.first_valid_index(), cathodecon]
+
+        if (search('Place', list2[j])) and (search('box', list2[j])) and (search('measurement', list2[j])):
+            pt_location = list2[j]
+            df_out['PumpTempLoc'] = df2.at[df2.first_valid_index(), pt_location]
+
+        if (search('Temperature', list2[j])) and (search('laboratory', list2[j])) and (search('during', list2[j])) and (search('sonde', list2[j])) :
+            t_lab = list2[j]
+            df_out['TLab'] = df2.at[df2.first_valid_index(), t_lab]
+
+        if (search('Relative humidity', list2[j])) and (search('laboratory', list2[j])) and (search('during', list2[j])) and (search('sonde', list2[j])) :
+            u_lab = list2[j]
+            df_out['ULab'] = df2.at[df2.first_valid_index(), u_lab]
+
+        if (search('Pump', list2[j])) and (search('correction', list2[j])) and (
+        search('table', list2[j])):
+            pump_table = list2[j]
+            df_out['PumpTable'] = df2.at[df2.first_valid_index(), pump_table]
+
+
+
+    df_out['Pair'] = df1['Pressure at observation (hPa)']
+    df_out['O3'] = df1['Ozone partial pressure (mPa)']
+    df_out['T'] = df1['Temperature (C)']
+    df_out['U'] = df1['Relative humidity (%)']
+    df_out['PF'] = df_out['PF'].astype('float')
+    # df_out['iB0'] = df_out['iB0'].astype('float')
+    df_out['iB2'] = df_out['iB2'].astype('float')
+    df_out['Cef'] = 1
+
+    return df_out
+
+
+def o3tocurrent(dft):
     # o3(mPa) = 4.3087 * 10e-4 * (i - ibg) * tp * t * cef * cref
     # tp: pump temp. in K, t: pumping time for 100 ml of air in seconds, cef: correction due to reduced ambient pressure for pump
     # cref: additional correction factor
     # i = o3 / (4.3087 * 10e-4 * tp * t * cef * cref ) + ibg
 
-    ensci = (df.SensorType == 'DMT-Z') | (df.SensorType == 'ECC6Z')
-    spc = df.SensorType == 'SPC-6A'
+    # ensci = (dft.SensorType == 'DMT-Z') | (dft.SensorType == 'ECC6Z')
+    # spc = dft.SensorType == 'SPC-6A'
 
-    df['Cef'] = ComputeCef(df)
+
+    sensortype = dft.at[dft.first_valid_index(), 'SensorType']
+
+    spctag = (search('SPC', sensortype)) or (search('6A', sensortype)) or (search('5A', sensortype)) or (
+        search('4A', sensortype))
+    if spctag: dft['SensorType'] = 'SPC'
+    enscitag = (search('DMT-Z', sensortype)) or (search('Z', sensortype)) or (search('ECC6Z', sensortype)) or (
+        search('_Z', sensortype))
+    if enscitag: dft['SensorType'] = 'DMT-Z'
+
+    ensci = (dft.SensorType == 'DMT-Z')
+    spc = (dft.SensorType == 'SPC')
+
+
+    dft['Cef'] = ComputeCef(dft)
     cref = 1
-    df['ibg'] = 0
+    dft['ibg'] = 0
+    dft['Pcor'] = 0
 
-    df.loc[ensci, 'ibg'] = df.loc[ensci,'iB0']
-    df.loc[ensci, 'CalibrationPressureCorrected'] = 1
+    dft.loc[ensci, 'ibg'] = dft.loc[ensci,'iB2']
+    dft.loc[spc,'ibg'] = ComputeIBG(dft[spc])
 
-    df.loc[spc, 'CalibrationPressureCorrected'] = ComputeCorP(df[spc], df.loc[spc, 'Pground'] )
-    df.loc[spc, 'ibg'] = ComputeIBG(df[spc])
-    # , 'CalibrationPressureCorrected'], df.loc[spc, 'Pair'], df.loc[spc, 'iB0'])
-    df.loc[ensci,'I'] = df.loc[ensci,'O3'] / \
-                                       (4.3087 * 10**(-4) * df.loc[ensci,'Tbox'] * df.loc[ensci, 'PF'] * df.loc[ensci,'Cef'] * cref) + df.loc[ensci,'ibg']
+    dft.loc[ensci,'I'] = dft.loc[ensci,'O3'] / \
+                                       (4.3087 * 10**(-4) * dft.loc[ensci,'Tbox'] * dft.loc[ensci, 'PF'] * dft.loc[ensci,'Cef'] * cref) + dft.loc[ensci,'ibg']
+    dft.loc[spc, 'I'] = dft.loc[spc, 'O3'] / \
+                          (4.3087 * 10 ** (-4) * dft.loc[spc, 'Tbox'] * dft.loc[spc, 'PF'] * dft.loc[
+                              spc, 'Cef'] * cref) + dft.loc[spc, 'ibg']
 
 
-    return df
+    return dft
 
-def ComputeCef(df):
+def ComputeCef(dft):
     """ Computes pump efficiency correction factor based on pressure
 
         Arguments:
         Pressure -- air pressure [hPa]
     """
-    spc = df.SensorType == 'SPC-6A'
-    sol3 = df.SolutionVolume.astype(float) >= 2.75
-    sol2 = df.SolutionVolume.astype(float) < 2.75
-    ensci = (df.SensorType == 'DMT-Z') | (df.SensorType == 'ECC6Z')
+    sensortype = dft.at[dft.first_valid_index(),'SensorType']
 
-    df.loc[(spc) & (sol3), 'Cef'] = \
-        VecInterpolate(VecP_ECC6A, VecC_ECC6A_30, df.loc[(spc) & (sol3), 'Pair'], 0)
-    df.loc[(spc) & (sol2), 'Cef'] = \
-        VecInterpolate(VecP_ECC6A, VecC_ECC6A_25, df.loc[(spc) & (sol2),'Pair'], 0)
-    df.loc[ensci,'Cef'] = VecInterpolate(VecP_ECCZ, VecC_ECCZ, df.loc[ensci,'Pair'], 0)
+    # print('sensortype', sensortype)
 
-    return df.Cef
+    spctag = (search('SPC', sensortype)) or (search('6A', sensortype)) or (search('5A', sensortype)) or (search('4A', sensortype))
+    if spctag: dft['SensorType'] = 'SPC'
+    enscitag = (search('DMT-Z', sensortype)) or (search('Z', sensortype)) or (search('ECC6Z', sensortype)) or (search('_Z', sensortype))
+    if enscitag: dft['SensorType'] = 'DMT-Z'
+
+    sol3 = dft.SolutionVolume.astype(float) >= 2.75
+    sol2 = dft.SolutionVolume.astype(float) < 2.75
+    ensci = (dft.SensorType == 'DMT-Z')
+    spc = (dft.SensorType == 'SPC')
+
+
+    dft.loc[(spc) & (sol3), 'Cef'] = \
+        VecInterpolate(VecP_ECC6A, VecC_ECC6A_30, dft.loc[(spc) & (sol3), 'Pair'], 0)
+    dft.loc[(spc) & (sol2), 'Cef'] = \
+        VecInterpolate(VecP_ECC6A, VecC_ECC6A_25, dft.loc[(spc) & (sol2),'Pair'], 0)
+    dft.loc[ensci,'Cef'] = VecInterpolate(VecP_ECCZ, VecC_ECCZ, dft.loc[ensci,'Pair'], 0)
+
+    return dft.Cef
 
 
 def VecInterpolate(XValues, YValues, dft, LOG):
@@ -103,7 +236,7 @@ def VecInterpolate(XValues, YValues, dft, LOG):
 
     return dft['Cef']
 
-def ComputeIBG(df):
+def ComputeIBG(dft):
   """ Corrects background current value based on pressure
 
       Arguments:
@@ -112,107 +245,35 @@ def ComputeIBG(df):
       Pressure                      -- air pressure [hPa]
       iB0                            -- background current
   """
-  df.Pcor = ComputeCorP(df, 'Pair') / ComputeCorP(df, 'Pground')
-  df.IBG = df.Pcor*df.iB0
+  dft.Pcor = ComputeCorP(dft, 'Pair') / ComputeCorP(dft, 'Pground')
+  dft.ibg = dft.Pcor*dft.iB2
 
-  return df.IBG
+  return dft.ibg
 
 
-def ComputeCorP(df, Pressure):
+def ComputeCorP(dft, Pressure):
 
   A0 = 0.0012250380415
   A1 = 0.000124111475632
   A2 = -0.00000002687066130
-  df.CorP = A0 + A1*df[Pressure] + A2*df[Pressure]*df[Pressure]
+  dft.CorP = A0 + A1*dft[Pressure].astype('float') + A2*dft[Pressure].astype('float')*dft[Pressure].astype('float')
 
-  return df.CorP
-
-def organize_df(df1, df2):
-
-
-    df_out = pd.DataFrame()
-    # print(list(df2))
-    list1 = list(df1)
-    for i in range(len(list1)):
-        if (search('Temperature', list1[i])) and (search('inside', list1[i])):
-            pump_temp = list1[i]
-            df_out['Tbox'] = df1[pump_temp] + K
-        if (search('Time', list1[i])) and (search('after', list1[i])):
-            time = list1[i]
-            df_out['Time'] = df1[time]
-        if (search('Geopotential', list1[i])) and (search('height', list1[i])):
-            height = list1[i]
-            df_out['Height'] = df1[height]
-
-    list2 = list(df2)
-    for j in range(len(list2)):
-        if (search('Background', list2[j])) and (search('end', list2[j])) and (search('pre-flight', list2[j])) :
-            bkg = list2[j]
-            df_out['BgCurrent'] = df2.at[df2.first_valid_index(), bkg]
-            df_out['iB0'] = df2.at[df2.first_valid_index(), bkg]
-            if(float(df2.at[df2.first_valid_index(), bkg]) > 1):
-                # efile.write("background: " + str(df2.at[df2.first_valid_index(), bkg]) + filename  + '\n')
-                print('background', df2.at[df2.first_valid_index(), bkg], filename)
-                df_out['BgCurrent'] = 0.03
-                df_out['iB0'] = 0.03
-        if ((search('Sensor', list2[j])) and (search('air', list2[j])) and (search('flow', list2[j]))) and \
-               not(search('calibrator', list2[j])):
-            pumpt = list2[j]
-            df_out['PF'] = df2.at[df2.first_valid_index(), pumpt]
-
-            if (float(df2.at[df2.first_valid_index(), pumpt]) < 25) | (float(df2.at[df2.first_valid_index(), pumpt]) > 35):
-                # efile.write("PF: " + str(df2.at[df2.first_valid_index(), pumpt]) + filename  + '\n')
-                print('PF', df2.at[df2.first_valid_index(), pumpt], filename)
-                df_out['PF'] = 29
-
-        if (search('Ozone', list2[j])) and (search('sensor', list2[j])) :
-            sensor = list2[j]
-            df_out['SensorType'] = df2.at[df2.first_valid_index(), sensor]
-            print(df2.at[df2.first_valid_index(), sensor])
-
-        if not(search('Ozone', list2[j])) and (search('sensor', list2[j])) :
-            try:
-                df_out['SensorType'] = df2.at[df2.first_valid_index(), 'Ozone sensor type']
-            except KeyError:
-                df_out['SensorType'] = 'DMT-Z'
-
-
-    df_out['Pair'] = df1['Pressure at observation (hPa)']
-    df_out['O3'] = df1['Ozone partial pressure (mPa)']
-    # df_out['Time'] = df1['Time after launch (s)']
-    df_out['T'] = df1['Temperature (C)']
-    df_out['U'] = df1['Relative humidity (%)']
-    # df_out['Height'] = df1['Geopotential height (gpm)']
-    df_out['Pground'] = df2.at[df2.first_valid_index(),'Background surface pressure (hPa)']
-    if (float(df2.at[df2.first_valid_index(),'Background surface pressure (hPa)']) > 1200) | (float(df2.at[df2.first_valid_index(),'Background surface pressure (hPa)']) <900):
-        # efile.write("Pground: " + str(df2.at[df2.first_valid_index(), 'Background surface pressure (hPa)']) + filename + '\n')
-        print('Pground', df2.at[df2.first_valid_index(), 'Background surface pressure (hPa)'] )
-        df_out['Pground'] = 1000
-
-
-    df_out['SolutionVolume'] = df2.at[df2.first_valid_index(), 'Amount of cathode solution (cm3)']
-    df_out['PF'] = df_out['PF'].astype('float')
-    df_out['iB0'] = df_out['iB0'].astype('float')
-    df_out['Cef'] = 1
-
-    # try:
-    # df_out['SensorType'] = df2.at[df2.first_valid_index(), 'Ozone sensor type']
-    # except KeyError:
-    #     df_out['SensorType'] = 'DMT-Z'
-
-
-    return df_out
-
-
+  return dft.CorP
 
 
 ##read datafiles
-allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
-metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
+allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/so1*.csv"))
+metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/so1*_md.csv"))
 
-for filename, metafile in zip(allFiles, metaFiles):
+for filename in (allFiles):
 
-    name = filename.split(".")[-2].split("/")[-1].split("uc")[1]
+    name = filename.split(".")[-2].split("/")[-1][2:8]
+    fname = filename.split(".")[-2].split("/")[-1]
+    print(fname)
+
+    metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/metadata/' + fname + "_md.csv"
+    # print('one', filename, metafile)
+
     date = datetime.strptime(name, '%y%m%d')
     datef = date.strftime('%Y%m%d')
 
@@ -220,21 +281,35 @@ for filename, metafile in zip(allFiles, metaFiles):
 
     dfd = pd.read_csv(filename)
     if(len(dfd) < 300): continue
-    dfm = pd.read_csv(metafile, index_col=0, names=['Parameter', 'Value'])
+    if len(dfd.columns) < 8: continue
+    try:
+        dfm = pd.read_csv(metafile, index_col=0, names=['Parameter', 'Value'])
+        if (len(dfm)) < 15:
+            print('skip this dataset for now, use the mean of everything later')
+            continue
+    except FileNotFoundError:
+        print(metafile)
+        continue
+
     dfm = dfm.T
 
     # print(filename.split(".")[-2].split("/")[-1])
-    if (name == "080825") | (name == "080702") | (name == "080704") | (name == "190214"): continue
-    print(filename)
+    # if (name == "080825") | (name == "080702") | (name == "080704") | (name == "190214"): continue
+    if (name == "021127") | (name == "080702") | (name == "080704") | (name == "190214"): continue
+
+    # print('two', name)
 
     dfl = pd.DataFrame()
     dfl = organize_df(dfd, dfm)
-
+    # print('three', name)
     dfl = o3tocurrent(dfl)
+    # print('four', name)
+    if np.isnan(dfl.at[dfl.first_valid_index(),'I']): print(dfl.at[dfl.first_valid_index(),'SensorType'])
 
     rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.csv"
-    pname = filename.split(".")[-2].split("uc")[0]
-
+    # pname = filename.split(".")[-2].split("s")[0]
+    pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
+    #
     dfl.to_csv(pname + '/Current/' + rawname)
 
 # efile.close()
