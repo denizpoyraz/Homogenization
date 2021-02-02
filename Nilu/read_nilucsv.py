@@ -48,18 +48,18 @@ def organize_df(df1, df2):
             bkg = list2[j]
             df_out['iB2'] = df2.at[df2.first_valid_index(), bkg]
 
-            if(float(df2.at[df2.first_valid_index(), bkg]) > 0.1):
-                # efile.write("background: " + str(df2.at[df2.first_valid_index(), bkg]) + filename  + '\n')
-                print('background', df2.at[df2.first_valid_index(), bkg], filename)
-                df_out['iB2'] = 0.03
+            # if(float(df2.at[df2.first_valid_index(), bkg]) > 0.1):
+            #     # efile.write("background: " + str(df2.at[df2.first_valid_index(), bkg]) + filename  + '\n')
+            #     print('background', df2.at[df2.first_valid_index(), bkg], filename)
+            #     df_out['iB2'] = 0.03
 
-        # if (search('Background', list2[j])) and (search('before', list2[j])) and (search('exposed', list2[j])) :
-        #     bkg = list2[j]
-        #     df_out['iB0'] = df2.at[df2.first_valid_index(), bkg]
-        #
-        #     if(float(df2.at[df2.first_valid_index(), bkg]) > 0.1):
-        #         print('background', df2.at[df2.first_valid_index(), bkg], filename)
-        #         df_out['iB0'] = 0.03
+        if (search('Background', list2[j])) and (search('before', list2[j])) and (search('exposed', list2[j])) :
+            bkg = list2[j]
+            df_out['iB0'] = df2.at[df2.first_valid_index(), bkg]
+
+            # if(float(df2.at[df2.first_valid_index(), bkg]) > 0.1):
+            #     print('background', df2.at[df2.first_valid_index(), bkg], filename)
+            #     df_out['iB0'] = 0.03
 
         if ((search('Sensor', list2[j])) and (search('air', list2[j])) and (search('flow', list2[j]))) and \
                not(search('calibrator', list2[j])):
@@ -127,7 +127,7 @@ def organize_df(df1, df2):
     df_out['T'] = df1['Temperature (C)']
     df_out['U'] = df1['Relative humidity (%)']
     df_out['PF'] = df_out['PF'].astype('float')
-    # df_out['iB0'] = df_out['iB0'].astype('float')
+    df_out['iB0'] = df_out['iB0'].astype('float')
     df_out['iB2'] = df_out['iB2'].astype('float')
     df_out['Cef'] = 1
 
@@ -262,8 +262,8 @@ def ComputeCorP(dft, Pressure):
 
 
 ##read datafiles
-allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/so1*.csv"))
-metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/so1*_md.csv"))
+allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
+metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
 
 for filename in (allFiles):
 

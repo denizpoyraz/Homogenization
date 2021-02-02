@@ -234,13 +234,15 @@ def absorption_efficiency (df, pair, solvolume):
     :param solvolume: volume of the cathode solution in mls
     :return: absorption efficeincy and its uncertainity
     '''
+    df['unc_alpha_o3'] = 0.01
+    df['alpha_o3'] = 1
+
 
     if solvolume == 2.5:
         df.loc[(df[pair] > 100) & (df[pair] < 1050), 'alpha_o3'] = 1.0044 - 4.4 * 10 ** -5 * df.loc[(df[pair] > 100) & (df[pair] < 1050), pair]
         df.loc[(df[pair] <= 100), 'alpha_o3'] = 1.0
     if solvolume == 3.0:
         df.loc[(df[pair] <= 1050), 'alpha_o3'] = 1.0
-    df['unc_alpha'] = 0.01
 
 
     return df['alpha_o3'], df['unc_alpha_o3']
@@ -254,58 +256,41 @@ def stoichemtry_conversion(df, pair, sensortype, solutionconcentration, referenc
     :return: r and uncertainity on r which are transfer functions and taken from Table 3 from the guideline
     '''
 
-    spc05 = (df.sensortype == 'SPC') & (df.solutionconcentration == 5)
-    spc10 = (df.sensortype == 'SPC') & (df.solutionconcentration == 10)
-    ensci05 = (df.sensortype == 'DMT-Z') & (df.solutionconcentration == 5)
-    ensci10 = (df.sensortype == 'DMT-Z') & (df.solutionconcentration == 10)
 
-    if (reference == 'SPC10') & (sensortype == 'SPC') & (solutionconcentration == 5):
-        df.loc[df.pair >= 30, 'r'] = 0.96
-        df.loc[df.pair < 30, 'r'] = 0.90 + 0.041 * np.log10(df[df.pair < 30])
+    df['stoich'] = 0
+    df['unc_stoich'] = 0.05
 
-    if (reference == 'ENSCI05') & (sensortype == 'ENSCI') & (solutionconcentration == 10):
-        df.loc[df.pair >= 30, 'r'] = 0.96
-        df.loc[df.pair < 30, 'r'] = 0.90 + 0.041 * np.log10(df[df.pair < 30])
-    # for k in range(len(pair)):
-    #
-    #     # if sondesstone == sondessttwo: r = 1
-    #     if (sondesstone == ['SPC', 0.5]) and (sondessttwo == ['SPC', 1.0]):
-    #         if pair[k] >= 30: r = 0.96
-    #         if pair[k] < 30: r = 0.90 + 0.041 * np.log10(pair[k])
-    #     if (sondesstone == ['ENSCI', 1.0]) and (sondessttwo == ['ENSCI', 0.5]):
-    #         if pair[k] >= 30: r = 0.96
-    #         if pair[k] < 30: r = 0.90 + 0.041 * np.log10(pair[k])
-    #     if (sondesstone == ['ENSCI', 1.0]) and (sondessttwo == ['SPC', 1.0]):
-    #         if pair[k] >= 50: r = 0.96
-    #         if pair[k] < 50: r = 0.764 + 0.133 * np.log10(pair[k])
-    #     if (sondesstone == ['SPC', 0.5]) and (sondessttwo == ['ENSCI', 0.5]):
-    #         if pair[k] >= 50: r = 0.96
-    #         if pair[k] < 50: r = 0.764 + 0.133 * np.log10(pair[k])
+    if (reference == 'ENSCI05') & (sensortype == 'DMT-Z') & (solutionconcentration == 10):
+        df.loc[df[pair] >= 30, 'stoich'] = 0.96
+        df.loc[df[pair] < 30, 'stoich'] = 0.90 + 0.041 * np.log10(df[df[pair] < 30][pair])
 
-    df['unc_r'] = 0.05
+    if (reference == 'ENSCI05') & (sensortype == 'DMT-Z') & (solutionconcentration == 5):
+        df['stoich'] = 1
+        df['unc_stoich'] = 0.03
 
-    return r, unc_r
+    if (reference == 'ENSCI05') & (sensortype == 'SPC') & (solutionconcentration == 10):
+        df['stoich'] = 1
+        df['unc_stoich'] = 0.03
+
+    # if (reference == 'SPC10') & (sensortype == 'SP') & (solutionconcentration == 5):
+    #     df.loc[df[pair] >= 50, 'stoich'] = 0.96
+    #     df.loc[df[pair] < 50, 'stoich'] = 0.764 + 0.133 * np.log10(df[df[pair] < 30])
+
+    return df['stoich'], df['unc_stoich']
 
 
-def conversion_efficiency(df, alpha_o3, alpha_unc, rstoich, rstoich_err, boolsstchange):
+def conversion_efficiency(df, alpha_o3, alpha_unc_o3, stoich, stoich_unc):
     '''
 
     :param alpha: absorption efficiency obtained by conversion_absorption
     :param alpha_unc: absorption efficiency unc. obtained by conversion_alpha
     :param rstoich: transfer functions obtained by conversion_stoichemtry
     :param rstoich_err: transfer functions unc. obtained by conversion_stoichemtry
-    :param boolsstchange: if there is a need for tranfer functions of the conversion_stoichemtry, if there was a change
-    in SST or Sonde Tyoe
     :return: total efficiency of the conversion etac_c and its uncertainity Eq. 4 from the guideline
     '''
-    stoich = 1
-    stoich_unc = 0.03
-    df['eta_c'] = df[alpha_o3] * stoich
-    df['unc_eta'] = df['eta_c'] * np.sqrt((df[alpha_unc] / df[alpha_o3]) ** 2 + (stoich_unc / stoich) ** 2)
 
-    if boolsstchange:
-        df['eta_c'] = df[alpha_o3] * stoich
-        df['unc_eta'] = df['eta_c'] * np.sqrt(
-            (alpha_unc / df[alpha_o3]) ** 2 + (stoich_unc / stoich) ** 2 + (rstoich_err / rstoich) ** 2)
+    df['eta_c'] = df[alpha_o3] * df[stoich]
+    df['unc_eta'] = df['eta_c'] * np.sqrt((df[alpha_unc_o3] / df[alpha_o3]) ** 2 + (df[stoich_unc] / df[stoich]) ** 2)
+
 
     return df['eta_c'], df['unc_eta']

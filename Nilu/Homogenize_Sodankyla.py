@@ -5,7 +5,7 @@ from re import search
 import glob
 from datetime import datetime
 
-from Homogenisation_Functions import po3tocurrent, absorption_efficiency, conversion_efficiency, background_correction, \
+from Homogenisation_Functions import po3tocurrent, absorption_efficiency, stoichemtry_conversion, conversion_efficiency, background_correction, \
     pumptemp_corr, pf_efficiencycorrection, currenttopo3, pf_groundcorrection
 
 station = 'Sodankyl'
@@ -21,10 +21,12 @@ for filename in allFiles:
     file = open(filename, 'r')
     date_tmp = filename.split('/')[9].split('_')[0][2:8]
 
+    # print(filename)
+
     date = datetime.strptime(date_tmp, '%y%m%d')
 
     datef = date.strftime('%Y%m%d')
-    print(datef)
+    # print(datef)
 
     df = pd.read_csv(filename)
     # print(list(df))
@@ -49,9 +51,19 @@ for filename in allFiles:
 
     Tlab = 20 + k
 
-    print(list(df))
+    # print(list(df))
+    if(df.at[df.first_valid_index(),'SensorType'] == 'DMT-Z') and (df.at[df.first_valid_index(),'SolutionConcentration'] == 10):
+        print(df.at[df.first_valid_index(),'SensorType'], df.at[df.first_valid_index(),'SolutionConcentration'])
+        print(datef)
+
+
 
     df['alpha_o3'], df['unc_alpha_o3'] =  absorption_efficiency(df, 'Pair', 'SolutionVolume')
-    ## stoichemtry mostly ENSCI 0.5, therefore tune the other sonde stype (if not ensci 0.5) to ensci 0.5
+    df['stoich'], df['unc_stoich'] = stoichemtry_conversion(df, 'Pair', df.at[df.first_valid_index(),'SensorType'],
+                                                            df.at[df.first_valid_index(),'SolutionConcentration'], 'ENSCI05')
+    df['eta_c'], df['unc_eta_c'] = conversion_efficiency(df, 'alpha_o3', 'alpha_unc_o3', 'stoich', 'unc_stoich')
+
+    df.to_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/' + str(datef) + "_dqa.csv")
+
 
 

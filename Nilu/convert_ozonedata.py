@@ -24,8 +24,33 @@ def convert_ozonedata(files: List[Path]) -> None:
 
     column_names_regexp = compile_column_names_regexp()
 
+    # print(sorted(files))
+    files = sorted(files)
+    size = (len(files))
+    datelist = [0]*size
+
+    j = 0
     for file in files:
-        print('file', file)
+        # print('file', str(file).split(".")[-2].split("/")[-1])
+        # tmp = str(file).split(".")[-2].split("/")[-1][2:8]
+        tmp = file.name.split(".")[0][2:8]
+        fileout = file
+
+        datelist[j] = tmp
+        # print(j)
+        if(j > 0) and (j < (size-1)):
+            if (datelist[j] == datelist[j-1]):
+                print(file)
+                print('one', files[j].name)
+                print('two', files[j-1].name)
+                # files[j-1].name = files[j].name.split(".")[0] + "_2nd" + files[j].name.split(".")[1]
+                print('test', files[j].name.split(".")[0] + "_2nd." + files[j].name.split(".")[1])
+                print('path',files[j].parent)
+                tmp = files[j].name.split(".")[0] + "_2nd." + files[j].name.split(".")[1]
+                fileout = files[j].parent + "/" + tmp
+                # path
+        j = j+1
+
         with open(file, 'r', encoding='ISO-8859-1') as rfile:
             data = rfile.read()
         if len(data) < 1000: continue
@@ -42,7 +67,7 @@ def convert_ozonedata(files: List[Path]) -> None:
         dfm = extract_constants_from_header(header.meta_data)
 
         # pd.Series(constants).to_csv(file.with_suffix('.csv'), header=False)
-        filename = str(file)
+        filename = str(fileout)
         filename = filename.split(".")[-2] + ('_md.csv')
         # print('filename', filename)
         # print(filename.split("/")[-1])
@@ -57,8 +82,9 @@ def convert_ozonedata(files: List[Path]) -> None:
         # dfm.to_csv(filename, header=False)
         # dfm.to_csv(filename)
 
-        df.to_hdf(file.with_suffix('.hdf'), key='df')
-        df.to_csv(file.with_suffix('.csv'))
+        df.to_hdf(fileout.with_suffix('.hdf'), key='df')
+        df.to_csv(fileout.with_suffix('.csv'))
+
 
 
 def get_header(p: Path, regexp, column_names_regexp) -> Header:
