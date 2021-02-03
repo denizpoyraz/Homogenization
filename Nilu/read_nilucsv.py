@@ -73,7 +73,6 @@ def organize_df(df1, df2):
         if (search('Ozone', list2[j])) and (search('sensor', list2[j])):
             sensor = list2[j]
             df_out['SensorType'] = df2.at[df2.first_valid_index(), sensor]
-            # print(df2.at[df2.first_valid_index(), sensor])
 
         if not((search('Ozone', list2[j])) and (search('sensor', list2[j]))) and (search('Serial number of ECC', list2[j])) :
             serial = list2[j]
@@ -84,7 +83,6 @@ def organize_df(df1, df2):
             if (df2.at[df2.first_valid_index(), serial][0] == "4"): df_out['SensorType'] = 'SPC-4A'
             if (df2.at[df2.first_valid_index(), serial][0] == "5"): df_out['SensorType'] = 'SPC-5A'
             if (df2.at[df2.first_valid_index(), serial][0] == "6"): df_out['SensorType'] = 'SPC-6A'
-            # print(df_out.at[df_out.first_valid_index(), 'SensorType'])
 
 
         if (search('Background', list2[j])) and (search('surface pressure', list2[j])):
@@ -120,8 +118,6 @@ def organize_df(df1, df2):
             pump_table = list2[j]
             df_out['PumpTable'] = df2.at[df2.first_valid_index(), pump_table]
 
-
-
     df_out['Pair'] = df1['Pressure at observation (hPa)']
     df_out['O3'] = df1['Ozone partial pressure (mPa)']
     df_out['T'] = df1['Temperature (C)']
@@ -143,19 +139,18 @@ def o3tocurrent(dft):
     # ensci = (dft.SensorType == 'DMT-Z') | (dft.SensorType == 'ECC6Z')
     # spc = dft.SensorType == 'SPC-6A'
 
-
     sensortype = dft.at[dft.first_valid_index(), 'SensorType']
 
     spctag = (search('SPC', sensortype)) or (search('6A', sensortype)) or (search('5A', sensortype)) or (
         search('4A', sensortype))
     if spctag: dft['SensorType'] = 'SPC'
+
     enscitag = (search('DMT-Z', sensortype)) or (search('Z', sensortype)) or (search('ECC6Z', sensortype)) or (
         search('_Z', sensortype))
     if enscitag: dft['SensorType'] = 'DMT-Z'
 
     ensci = (dft.SensorType == 'DMT-Z')
     spc = (dft.SensorType == 'SPC')
-
 
     dft['Cef'] = ComputeCef(dft)
     cref = 1
@@ -194,7 +189,6 @@ def ComputeCef(dft):
     ensci = (dft.SensorType == 'DMT-Z')
     spc = (dft.SensorType == 'SPC')
 
-
     dft.loc[(spc) & (sol3), 'Cef'] = \
         VecInterpolate(VecP_ECC6A, VecC_ECC6A_30, dft.loc[(spc) & (sol3), 'Pair'], 0)
     dft.loc[(spc) & (sol2), 'Cef'] = \
@@ -202,7 +196,6 @@ def ComputeCef(dft):
     dft.loc[ensci,'Cef'] = VecInterpolate(VecP_ECCZ, VecC_ECCZ, dft.loc[ensci,'Pair'], 0)
 
     return dft.Cef
-
 
 def VecInterpolate(XValues, YValues, dft, LOG):
 
@@ -309,6 +302,7 @@ for filename in (allFiles):
     rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.csv"
     # pname = filename.split(".")[-2].split("s")[0]
     pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
+    # print(rawname)
     #
     dfl.to_csv(pname + '/Current/' + rawname)
 

@@ -31,8 +31,7 @@ def convert_ozonedata(files: List[Path]) -> None:
 
     j = 0
     for file in files:
-        # print('file', str(file).split(".")[-2].split("/")[-1])
-        # tmp = str(file).split(".")[-2].split("/")[-1][2:8]
+        print(file)
         tmp = file.name.split(".")[0][2:8]
         fileout = file
 
@@ -40,15 +39,10 @@ def convert_ozonedata(files: List[Path]) -> None:
         # print(j)
         if(j > 0) and (j < (size-1)):
             if (datelist[j] == datelist[j-1]):
-                print(file)
-                print('one', files[j].name)
-                print('two', files[j-1].name)
-                # files[j-1].name = files[j].name.split(".")[0] + "_2nd" + files[j].name.split(".")[1]
-                print('test', files[j].name.split(".")[0] + "_2nd." + files[j].name.split(".")[1])
-                print('path',files[j].parent)
+                # print(file)
                 tmp = files[j].name.split(".")[0] + "_2nd." + files[j].name.split(".")[1]
-                fileout = files[j].parent + "/" + tmp
-                # path
+                fileout = str(files[j].parent) + "/" + tmp
+                fileout = Path(fileout)
         j = j+1
 
         with open(file, 'r', encoding='ISO-8859-1') as rfile:
@@ -57,9 +51,6 @@ def convert_ozonedata(files: List[Path]) -> None:
         if file.name == 'le170517.b11' or file.name == 'le200903.b11' or file.name == 'nm030612.b11' or file.name == 'SO040714.Q12'\
                 or file.name == 'so081203.q12': continue
         header = get_header(file, regexp, column_names_regexp)
-        # print(' header.lines', header.lines)
-        # print(' header.column_names', header.column_names)
-        # print(' header.meta_data', header.meta_data)
 
         df = get_data(file, header)
         # Write data to hdf and metadata to csv
@@ -68,19 +59,11 @@ def convert_ozonedata(files: List[Path]) -> None:
 
         # pd.Series(constants).to_csv(file.with_suffix('.csv'), header=False)
         filename = str(fileout)
-        filename = filename.split(".")[-2] + ('_md.csv')
-        # print('filename', filename)
-        # print(filename.split("/")[-1])
-
-        # path = filename.split(".")[0].split(station+'/')[0] + station + '/CSV'
-        # md_name = path + filename.split(".")[0].split(station+'/')[1] + ('_md.csv')
-        # df_name = path + filename.split(".")[0].split(station+'/')[1] + ('.csv')
+        filenamecsv = filename.split(".")[-2] + ('_md.csv')
+        filenamehdf = filename.split(".")[-2] + ('_md.hdf')
         # #
-        # print(filename)
-        # print(path, df_name, md_name)
-        pd.Series(constants).to_csv(filename, header=False)
-        # dfm.to_csv(filename, header=False)
-        # dfm.to_csv(filename)
+        pd.Series(constants).to_csv(filenamecsv, header=False)
+        pd.Series(constants).to_hdf(filenamehdf, key = 'df')
 
         df.to_hdf(fileout.with_suffix('.hdf'), key='df')
         df.to_csv(fileout.with_suffix('.csv'))
@@ -94,18 +77,11 @@ def get_header(p: Path, regexp, column_names_regexp) -> Header:
 
 
     column_names = column_names_regexp.findall(data)
-    # print('column_names_regexp', column_names_regexp)
-    # print('column_names', column_names)
     match = regexp.search(data)
-    # print('match', match)
-    # print('match.span(2)', match.span(2))
-
     position_data = match.span(2)[0]
-    # print('position_data', position_data)
     header_lines = data[0:position_data].count("\n")
-    # print('header lines', header_lines)
     meta_data = match.groups()[0]
-    # print('meta_data', meta_data)
+
     return Header(header_lines, column_names, meta_data)
 
 
@@ -159,7 +135,6 @@ def extract_constants_from_header(text: str) -> Dict[str, float]:
             cleaned_values.append(v)
         else:
             cleaned_values.extend(v.split())
-    # print(len(cleaned_values), cleaned_values)
     constants = dict(zip(variables, cleaned_values))
     # df = pd.DataFrame([cleaned_values], columns=variables)
     return constants

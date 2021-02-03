@@ -58,38 +58,41 @@ dfpl = dfpl.set_index('Date')
 plt.close('all')
 fig, ax = plt.subplots()
 
-# plt.fill_between(dfpl.index, dfpl.iB0.mean()-dfpl.iB0.std(), dfpl.iB0.mean()+dfpl.iB0.std(), facecolor='#1f77b4', alpha=.2)
 # plt.fill_between(dfpl.index, dfpl.iB0.mean()-2 * dfpl.iB0.std(), dfpl.iB0.mean()+ 2 *dfpl.iB0.std(), facecolor='#1f77b4', alpha=.2, label = r"Mean$\pm$2sigma")
-
-# plt.fill_between(dfpl.index, dfpl.iB2.mean()-2*dfpl.iB2.std(), dfpl.iB2.mean()+2*dfpl.iB2.std(), facecolor='#ff7f0e', alpha=.2,  label = r"Mean$\pm$2sigma")
 #
 # plt.plot(dfpl.index, dfpl.iB0,  label="iB0", linestyle = 'None', color = '#1f77b4',  marker="o", markersize = 3)
-# plt.plot(dfpl.index, dfpl.iB2, label="iB2", linestyle = 'None', color='#ff7f0e', marker="X", markersize = 3)
-# # ax.axhline(y=dfpl.iB0.median(), color='grey', label = "Median iB0")
-# ax.axhline(y=dfpl.iB2.mean()+ dfpl.iB2.std(), color='#ff7f0e',linestyle='--', label = "Mean iB2 + 1sigma")
-# ax.axhline(y=dfpl.iB2.mean(), color='#ff7f0e', label = "Mean iB2")
-# ax.axhline(y=dfpl.iB2.mean()- dfpl.iB2.std(), color='#ff7f0e',linestyle='--', label = "Mean iB2 - 1sigma")
-#
-# ax.axhline(y=dfpl.iB2.median(), color='grey', linestyle='--', label = "Median iB2")
+# ax.axhline(y=dfpl.iB0.median(), color='grey', label = "Median iB0")
 # ax.axhline(y=dfpl.iB0.mean() + dfpl.iB0.std(), color='#1f77b4',linestyle='--', label = "Mean iB0 + 1sigma")
 # ax.axhline(y=dfpl.iB0.mean(), color='#1f77b4', label = "Mean iB0")
 # ax.axhline(y=dfpl.iB0.mean() - dfpl.iB0.std(), color='#1f77b4',linestyle='--', label = "Mean iB0 - 1sigma")
 
 
-plt.fill_between(dfpl.index, dfpl.PF.mean()-2*dfpl.PF.std(), dfpl.PF.mean()+2*dfpl.PF.std(), facecolor='#1f77b4', alpha=.2, label = r"Mean$\pm$2sigma")
+plt.fill_between(dfpl.index, dfpl.iB2.mean()-2*dfpl.iB2.std(), dfpl.iB2.mean()+2*dfpl.iB2.std(), facecolor='#ff7f0e', alpha=.2,  label = r"Mean$\pm$2sigma")
 
-plt.plot(dfpl.index, dfpl.PF,  label="PF", linestyle = 'None', color = '#1f77b4',  marker="o", markersize = 3)
-ax.axhline(y=dfpl.PF.median(), color='grey', label = "Median PF")
-ax.axhline(y=dfpl.PF.mean() + dfpl.PF.std(), color='#1f77b4',linestyle='--', label = "Mean PF + 1sigma")
+plt.plot(dfpl.index, dfpl.iB2, label="iB2", linestyle = 'None', color='#ff7f0e', marker="X", markersize = 3)
+ax.axhline(y=dfpl.iB2.median(), color='grey', label = "Median iB2")
 
-ax.axhline(y=dfpl.PF.mean(), color='#1f77b4', label = "Mean PF")
-ax.axhline(y=dfpl.PF.mean() - dfpl.PF.std(), color='#1f77b4',linestyle='--', label = "Mean PF - 1sigma")
+ax.axhline(y=dfpl.iB2.mean()+ dfpl.iB2.std(), color='#ff7f0e',linestyle='--', label = "Mean iB2 + 1sigma")
+ax.axhline(y=dfpl.iB2.mean(), color='#ff7f0e', label = "Mean iB2")
+ax.axhline(y=dfpl.iB2.mean()- dfpl.iB2.std(), color='#ff7f0e',linestyle='--', label = "Mean iB2 - 1sigma")
+#
 
 
-plt.title('Sodankyla PF values')
+
+# plt.fill_between(dfpl.index, dfpl.PF.mean()-2*dfpl.PF.std(), dfpl.PF.mean()+2*dfpl.PF.std(), facecolor='#1f77b4', alpha=.2, label = r"Mean$\pm$2sigma")
+#
+# plt.plot(dfpl.index, dfpl.PF,  label="PF", linestyle = 'None', color = '#1f77b4',  marker="o", markersize = 3)
+# ax.axhline(y=dfpl.PF.median(), color='grey', label = "Median PF")
+# ax.axhline(y=dfpl.PF.mean() + dfpl.PF.std(), color='#1f77b4',linestyle='--', label = "Mean PF + 1sigma")
+#
+# ax.axhline(y=dfpl.PF.mean(), color='#1f77b4', label = "Mean PF")
+# ax.axhline(y=dfpl.PF.mean() - dfpl.PF.std(), color='#1f77b4',linestyle='--', label = "Mean PF - 1sigma")
+
+
+plt.title('Sodankyla iB2 values')
 ax.legend(loc='best', frameon=True, fontsize='small')
 
-plotname = 'PF_timeseries_v2'
+plotname = 'iB2_timeseries_v3'
 
 plt.savefig('/home/poyraden/Analysis/Homogenization_Analysis/Plots/Sodankyl/' + plotname + '.pdf')
 plt.savefig('/home/poyraden/Analysis/Homogenization_Analysis/Plots/Sodankyl/' + plotname + '.eps')
