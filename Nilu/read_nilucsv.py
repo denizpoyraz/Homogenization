@@ -9,6 +9,7 @@ from datetime import datetime
 __MissingData__ = -32768.0
 K = 273.15
 station = 'Sodankyl'
+# station = 'Uccle'
 
 # efile = open("errorfile_" + station + ".txt", "w")
 
@@ -141,16 +142,19 @@ def o3tocurrent(dft):
 
     sensortype = dft.at[dft.first_valid_index(), 'SensorType']
 
-    spctag = (search('SPC', sensortype)) or (search('6A', sensortype)) or (search('5A', sensortype)) or (
-        search('4A', sensortype))
-    if spctag: dft['SensorType'] = 'SPC'
+    spctag4A = (search('SPC', sensortype)) or (search('4A', sensortype))
+    if spctag4A: dft['SensorType'] = 'SPC-4A'
+    spctag5A = (search('SPC', sensortype)) or (search('5A', sensortype))
+    if spctag5A: dft['SensorType'] = 'SPC-5A'
+    spctag6A = (search('SPC', sensortype)) or (search('6A', sensortype))
+    if spctag6A: dft['SensorType'] = 'SPC-6A'
 
     enscitag = (search('DMT-Z', sensortype)) or (search('Z', sensortype)) or (search('ECC6Z', sensortype)) or (
         search('_Z', sensortype))
     if enscitag: dft['SensorType'] = 'DMT-Z'
 
     ensci = (dft.SensorType == 'DMT-Z')
-    spc = (dft.SensorType == 'SPC')
+    spc = (dft.SensorType == 'SPC') | (dft.SensorType == 'SPC-4A') | (dft.SensorType == 'SPC-5A') | (dft.SensorType == 'SPC-6A')
 
     dft['Cef'] = ComputeCef(dft)
     cref = 1
@@ -258,6 +262,8 @@ def ComputeCorP(dft, Pressure):
 allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
 metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
 
+list_data = []
+
 for filename in (allFiles):
 
     name = filename.split(".")[-2].split("/")[-1][2:8]
@@ -265,7 +271,7 @@ for filename in (allFiles):
     print(fname)
 
     metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/metadata/' + fname + "_md.csv"
-    # print('one', filename, metafile)
+    # metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Uccle/metadata/' + fname + "_md.csv"
 
     date = datetime.strptime(name, '%y%m%d')
     datef = date.strftime('%Y%m%d')
@@ -285,29 +291,37 @@ for filename in (allFiles):
         continue
 
     dfm = dfm.T
+    dfm['Date'] = datef
 
-    # print(filename.split(".")[-2].split("/")[-1])
-    # if (name == "080825") | (name == "080702") | (name == "080704") | (name == "190214"): continue
-    if (name == "021127") | (name == "080702") | (name == "080704") | (name == "190214"): continue
-
-    # print('two', name)
-
-    dfl = pd.DataFrame()
-    dfl = organize_df(dfd, dfm)
-    # print('three', name)
-    dfl = o3tocurrent(dfl)
-    # print('four', name)
-    if np.isnan(dfl.at[dfl.first_valid_index(),'I']): print(dfl.at[dfl.first_valid_index(),'SensorType'])
-
-    rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.csv"
+    # # print(filename.split(".")[-2].split("/")[-1])
+    # # if (name == "080825") | (name == "080702") | (name == "080704") | (name == "190214"): continue
+    # if (name == "021127") | (name == "080702") | (name == "080704") | (name == "190214"): continue
+    #
+    # # print('two', name)
+    #
+    # dfl = pd.DataFrame()
+    # dfl = organize_df(dfd, dfm)
+    # # print('three', name)
+    # dfl = o3tocurrent(dfl)
+    # # print('four', name)
+    # if np.isnan(dfl.at[dfl.first_valid_index(),'I']): print(dfl.at[dfl.first_valid_index(),'SensorType'])
+    #
+    # rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.csv"
     # pname = filename.split(".")[-2].split("s")[0]
     pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
+    # pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Uccle/'
+
     # print(rawname)
     #
-    dfl.to_csv(pname + '/Current/' + rawname)
+    # dfl.to_csv(pname + '/Current/' + rawname)
+
+    list_data.append(dfm)
 
 # efile.close()
 
 
+dff = pd.concat(list_data,ignore_index=True)
+hdfall = pname + "All_metedata.hdf"
 
+dff.to_hdf(hdfall, key = 'df')
 

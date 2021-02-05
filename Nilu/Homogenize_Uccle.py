@@ -39,7 +39,7 @@ for filename in allFiles:
     df['Datedt'] = pd.to_datetime(df['Date'], format='%Y%m%d').dt.date
 
 
-    Tlab = 20 + k
+    df['Tlab'] = 20 + k
     ## calculation of I for the data before 2007
     # if datef < '20070101':
     #     df['I'] = (df['O3'] * 1000) / (0.43085 * (df['Tbox']) * df['PF']) + np.abs(df['iB0'])
@@ -50,8 +50,9 @@ for filename in allFiles:
 
     ## DQA corrections
     # first ground correction then efficiency
-    df['Phip_ground'], df['unc_phix'] = pf_groundcorrection(df, 'Phip', 'dPhip_meas', Tlab, 'unc_Phip', 'unc_Phip',
+    df['Phip_ground'], df['unc_phix'] = pf_groundcorrection(df, 'Phip', 'dPhip_meas', 'Tlab', 'unc_Phip', 'unc_Phip',
                                                             'Phip_ground', 'unc_phix')
+    # pf_groundcorrection(df, phim, unc_phim, tlab, plab, rhlab):
     df['unc_phipgr'] = 0.004
     df['dPhip_gr'] = 0.02
 
@@ -63,14 +64,14 @@ for filename in allFiles:
     except ValueError:
         print('ValueError', datef)
 
-    df['iBc'], df['unc_iB0'] = background_correction(df, df, 'iB0', 'iBc', 'unc_iB0')
+    df['iBc'], df['unc_iBc'] = background_correction(df, df, 'iB0')
     df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'Eta', 'Phip_cor', False, 'O3c')
 
     ## uncertainities
     df['dI'] = 0
     df.loc[df.I < 1,'dI'] = 0.01
     df.loc[df.I >= 1, 'dI'] = 0.01 * df.loc[df.I > 1, 'I']
-    df['dIall'] = (df['dI']**2 + df['unc_iB0']**2)/(df['I'] - df['iB0'])**2
+    df['dIall'] = (df['dI']**2 + df['unc_iBc']**2)/(df['I'] - df['iB0'])**2
     # unc_eta = (DeltaEtac/Etac)**2
     df['dEta'] = 0.0013
     # final uncertainity on O3
