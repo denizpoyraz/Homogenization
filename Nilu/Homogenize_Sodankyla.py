@@ -6,7 +6,7 @@ import glob
 from datetime import datetime
 
 from Homogenisation_Functions import po3tocurrent, absorption_efficiency, stoichemtry_conversion, conversion_efficiency, background_correction, \
-    pumptemp_corr, currenttopo3, pf_groundcorrection, organize_metadata, calculate_cph, pumpflow_efficiency
+    pumptemp_corr, currenttopo3, pf_groundcorrection, organize_metadata, calculate_cph, pumpflow_efficiency, return_phipcor
 # pf_efficiencycorrection
 
 station = 'Sodankyl'
@@ -102,10 +102,51 @@ for filename in allFiles:
     #pump flow corrections
     # ground correction
     df['Phip_ground'], df['unc_Phip_ground'] = pf_groundcorrection(df, 'Phip', 'unc_Phip', 'TLab', 'Pground', 'ULab')
-    #efficiency correction
-    df['Cpf'], df['unc_Cpf'] = pumpflow_efficiency(df, 'P', 'komhyr_95', 'table_interpolate')
 
+    #efficiency correction
+    pumpflowtable = ''
+    if df.at[df.first_valid_index(),'SensorType'] == 'SPC' : pumpflowtable = 'komhyr_86'
+    if df.at[df.first_valid_index(),'SensorType'] == 'DMT-Z' : pumpflowtable = 'komhyr_95'
+    df['Cpf'], df['unc_Cpf'] = pumpflow_efficiency(df, 'P', pumpflowtable, 'table_interpolate')
+    df['Phip_cor'], df['unc_Phip_cor'] = return_phipcor(df,'Phip_ground', 'unc_Phip_ground', 'Cpf', 'unc_Cpf')
+
+    df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'Eta', 'Phip_cor', False)
+
+    ## uncertainities
+    df['dI'] = 0
+    df.loc[df.I < 1, 'dI'] = 0.01
+    df.loc[df.I >= 1, 'dI'] = 0.01 * df.loc[df.I > 1, 'I']
+    df['dIall'] = (df['dI'] ** 2 + df['unc_iBc'] ** 2) / (df['I'] - df['iB0']) ** 2
+    # unc_eta = (DeltaEtac/Etac)**2
+    df['dEta'] =  (df['unc_eta_c'] / df['unc_eta_c'])**2
+    df['dPhi_cor'] = (df['unc_Phip_cor'] / df['Phip_cor'])**2
+    df['dTpump_cor'] = (df['unc_Tpump_cor'] / df['Tpump_cor'])**2
+    # final uncertainity on O3
+    df['dO3'] = np.sqrt(df['dIall'] + df['dEta'] + df['dPhi_cor'] + df['dTpump_cor'])
+
+    df.to_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/All/' + datestr + "_dqaAll.csv")
+
+    df['PF'] = df['Phip_cor']
+    df['Tbox'] = df['Tpump_cor']
+    df['iB0'] = df['iBc']
+    df['O3'] = df['O3c']
+
+    df = df.drop(
+        ['SolutionVolume', 'SolutionConcentration', 'Pground', 'TLab', 'ULab', 'PumpTable', 'SerialECC', 'SensorType',
+         'Cef', 'ibg', 'Pcor', 'Datedt', 'Tpump', 'Phip', 'Eta', 'P', 'unc_Phip', 'unc_Tpump', 'unc_cph', 'unc_cpl', 'unc_alpha_o3',
+         'alpha_o3', 'stoich', 'unc_stoich', 'eta_c', 'unc_eta', 'unc_eta_c', 'iBc', 'unc_iBc', 'Tpump_cor', 'unc_Tpump_cor',
+         'deltat', 'unc_deltat', 'deltat_ppi', 'unc_deltat_ppi', 'x', 'psaturated', 'cph', 'tlabK', 'cPL', 'Phip_ground',
+         'unc_Phip_ground', 'Cpf', 'unc_Cpf', 'Phip_cor', 'unc_Phip_cor', 'O3c', 'dIall', 'dEta', 'dPhi_cor', 'dTpump_cor' ], axis=1)
+
+    # print(list(df))
+
+
+    df.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/' + datestr + '_dqa.h5', key='df', mode='w')
     df.to_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/' + datestr + "_dqa.csv")
+
+
+
+
 
 
 

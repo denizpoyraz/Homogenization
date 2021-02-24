@@ -12,11 +12,11 @@ import datetime
 # eta_c: conersion efficiency
 # Phi_p: gas volume flow rate in cm3^3/s
 
-pval = np.array([200, 100, 50, 30, 20, 10, 7, 5, 3])
+pval = np.array([1100, 200, 100, 50, 30, 20, 10, 7, 5, 3])
 
 
-komhyr_86 = np.array([1, 1.007, 1.018, 1.022, 1.032, 1.055, 1.070, 1.092, 1.124])  # SP Komhyr
-komhyr_95 = np.array([1, 1.007, 1.018, 1.029, 1.041, 1.066, 1.087, 1.124, 1.241])  # ECC Komhyr
+komhyr_86 = np.array([1, 1, 1.007, 1.018, 1.022, 1.032, 1.055, 1.070, 1.092, 1.124])  # SP Komhyr
+komhyr_95 = np.array([1,1,  1.007, 1.018, 1.029, 1.041, 1.066, 1.087, 1.124, 1.241])  # ECC Komhyr
 john_02 = np.array([1, 1.035, 1.052, 1.072, 1.088, 1.145, 1.200, 1.1260, 1])  # ECC Johnson
 sbrecht_98 = np.array([1, 1.027, 1.075, 1.108, 1.150, 1.280, 1.5, 1.8, 1])  # BM Steinbrecht
 kob_66 = np.array([1, 1.02, 1.04, 1.07, 1.11, 1.25, 1.4, 1.66, 1])  # Kobayashi
@@ -26,8 +26,8 @@ VecP_ECC6A =    [    0,     2,     3,      5,    10,    20,    30,    50,   100,
 VecC_ECC6A_25 = [ 1.16,  1.16, 1.124,  1.087, 1.054, 1.033, 1.024, 1.015, 1.010, 1.007, 1.005, 1.002,    1,    1]
 VecC_ECC6A_30 = [ 1.171, 1.171, 1.131, 1.092, 1.055, 1.032, 1.022, 1.015, 1.011, 1.008, 1.006, 1.004,    1,    1]
 
-komhyr_86_unc = np.array([0, 0.005, 0.006, 0.008, 0.009, 0.010, 0.012, 0.014, 0.025])  # SP Komhyr
-komhyr_95_unc = np.array([0, 0.005, 0.005, 0.008, 0.012, 0.023, 0.024, 0.024, 0.043])  # ECC Komhyr
+komhyr_86_unc = np.array([0,0, 0.005, 0.006, 0.008, 0.009, 0.010, 0.012, 0.014, 0.025])  # SP Komhyr
+komhyr_95_unc = np.array([0,0, 0.005, 0.005, 0.008, 0.012, 0.023, 0.024, 0.024, 0.043])  # ECC Komhyr
 john_02_unc = np.array([0, 0.011, 0.012, 0.015, 0.018, 0.020, 0.025, 0.030, 0.0])  # ECC Johnson
 sbrecht_98_unc = np.array([0, 0.004, 0.006, 0.007, 0.011, 0.020, 0.1, 0.2, 0.0])  # BM Steinbrecht
 kob_66_unc = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])  # Kobayashi
@@ -103,9 +103,9 @@ def VecInterpolate(XValues, YValues, unc_YValues, dft, Pair, LOG):
     dft['Cef'] = 0
 
     i = 1
-    ilast = len(XValues) - 1
+    # ilast = len(YValues) - 1
     # return last value if xval out of xvalues range
-    y = float(YValues[ilast])
+    # y = float(YValues[ilast])
 
     dft = dft.reset_index()
 
@@ -117,19 +117,21 @@ def VecInterpolate(XValues, YValues, unc_YValues, dft, Pair, LOG):
 
                 x1 = float(XValues[i])
                 x2 = float(XValues[i+1])
+                # print('k', k,x1,x2)
                 if LOG == 1:
                     x = math.log(x)
                     x1 = math.log(x1)
                     x2 = math.log(x2)
                 y1 = float(YValues[i])
                 y2 = float(YValues[i+1])
+                # print(k,y1,y2)
+
                 unc_y1 = float(unc_YValues[i])
                 unc_y2 = float(unc_YValues[i + 1])
                 dft.at[k,'Cpf'] = y1 + (dft.at[k,Pair] - x1) * (y2 - y1) / (x2 - x1)
                 dft.at[k,'unc_Cpf'] = unc_y1 + (dft.at[k,Pair] - x1) * (unc_y2 - unc_y1) / (x2 - x1)
+                # print(k, dft.at[k,'Cpf'] )
 
-                dft.at[k,'y'] = y1 + (dft.at[k,Pair] - x1) * (y2 - y1) / (x2 - x1)
-                # print(k, dft.at[k,'Pair'], y1 + (dft.at[k,'Pair'] - x1) * (y2 - y1) / (x2 - x1))
 
     return dft['Cpf'], dft['unc_Cpf']
 
@@ -156,6 +158,16 @@ def pumpflow_efficiency(df, pair,  pumpcorrectiontag, effmethod ):
             df['Cpf'], df['unc_Cpf'] = VecInterpolate(pval, komhyr_95, komhyr_95_unc,  df, pair, 0)
 
     return df['Cpf'], df['unc_Cpf']
+
+def return_phipcor(df,phip_grd, unc_phip_grd, cpf, unc_cpf):
+
+    df['Phip_cor'] = df[phip_grd]/df[cpf]
+
+    df['unc_Phip_cor'] = df['Phip_cor'] * np.sqrt( df[unc_phip_grd]**2/df[phip_grd]**2 + df[unc_cpf]**2/df[cpf]**2 )
+
+    return df['Phip_cor'], df['unc_Phip_cor']
+
+
 
 #
 # def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, effmethod, out, unc_out):
@@ -264,7 +276,7 @@ def po3tocurrent(df, po3, tpump, ib, etac, phip, boolcorrection, out):
     return df[out]
 
 
-def currenttopo3(df, im, tpump, ib, etac, phip, boolcorrection, out):
+def currenttopo3(df, im, tpump, ib, etac, phip, boolcorrection):
     '''
     :param df: dataframe
     :param po3: partial ozone pressure of the sonde
@@ -278,10 +290,10 @@ def currenttopo3(df, im, tpump, ib, etac, phip, boolcorrection, out):
     '''
 
     if (boolcorrection == False):
-        df.loc[(df[im] == 0), out] = 0
-        df[out] = 0.043085 * df[tpump] / (df[etac] * df[phip]) * (df[im] - df[ib])
+        df.loc[(df[im] == 0), 'O3c'] = 0
+        df['O3c'] = 0.043085 * df[tpump] / (df[etac] * df[phip]) * (df[im] - df[ib])
 
-    return df[out]
+    return df['O3c']
 
 
 def pumptemp_corr(df, boxlocation, temp, unc_temp, pair):
