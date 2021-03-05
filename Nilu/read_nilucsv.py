@@ -4,6 +4,7 @@ import math
 import numpy as np
 from re import search
 from datetime import datetime
+# ndacc wget --mirror --no-parent https://woudc.org/archive/NDACC/station/sodanky/ames/o3sonde/
 
 
 __MissingData__ = -32768.0
@@ -263,6 +264,7 @@ allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Fil
 metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
 
 list_data = []
+list_raw = []
 
 for filename in (allFiles):
 
@@ -275,8 +277,6 @@ for filename in (allFiles):
 
     date = datetime.strptime(name, '%y%m%d')
     datef = date.strftime('%Y%m%d')
-
-    # if datef < "20070514": continue
 
     dfd = pd.read_csv(filename)
     if(len(dfd) < 300): continue
@@ -293,29 +293,29 @@ for filename in (allFiles):
     dfm = dfm.T
     dfm['Date'] = datef
 
-    # # print(filename.split(".")[-2].split("/")[-1])
-    # # if (name == "080825") | (name == "080702") | (name == "080704") | (name == "190214"): continue
-    # if (name == "021127") | (name == "080702") | (name == "080704") | (name == "190214"): continue
-    #
-    # # print('two', name)
-    #
-    # dfl = pd.DataFrame()
-    # dfl = organize_df(dfd, dfm)
+    dfl = pd.DataFrame()
+    dfl = organize_df(dfd, dfm)
     # # print('three', name)
-    # dfl = o3tocurrent(dfl)
-    # # print('four', name)
+    dfl = o3tocurrent(dfl)
+    dfl['Date'] = datef
+
     # if np.isnan(dfl.at[dfl.first_valid_index(),'I']): print(dfl.at[dfl.first_valid_index(),'SensorType'])
     #
     # rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.csv"
+    rawname = filename.split(".")[-2].split("/")[-1] + "_rawcurrent.hdf"
+    metaname = filename.split(".")[-2].split("/")[-1] + "_metadata.csv"
+
     # pname = filename.split(".")[-2].split("s")[0]
     pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
     # pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Uccle/'
 
-    # print(rawname)
     #
-    # dfl.to_csv(pname + '/Current/' + rawname)
+    dfl.to_hdf(pname + '/Current/' + rawname, key = 'df')
+    dfm.to_csv(pname + '/Current/' + metaname)
+
 
     list_data.append(dfm)
+    list_raw.append(dfl)
 
 # efile.close()
 
@@ -324,4 +324,9 @@ dff = pd.concat(list_data,ignore_index=True)
 hdfall = pname + "All_metedata.hdf"
 
 dff.to_hdf(hdfall, key = 'df')
+
+dfr = pd.concat(list_raw,ignore_index=True)
+hdfraw = pname + "Sodankyl_rawdata.hdf"
+
+dfr.to_hdf(hdfraw, key = 'df')
 

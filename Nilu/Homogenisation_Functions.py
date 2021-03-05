@@ -14,6 +14,10 @@ import datetime
 
 pval = np.array([1100, 200, 100, 50, 30, 20, 10, 7, 5, 3])
 
+pval_sod = np.array([1100, 150, 100, 70, 60, 50, 40, 30, 20, 15, 10, 8, 5])
+corr_sod = np.array([1,1,1.010, 1.022, 1.025, 1.035, 1.047, 1.065, 1.092, 1.120, 1.170, 1.206, 1.300])
+corr_sod_unc = np.array([0 ,0 ,0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05])
+
 
 komhyr_86 = np.array([1, 1, 1.007, 1.018, 1.022, 1.032, 1.055, 1.070, 1.092, 1.124])  # SP Komhyr
 komhyr_95 = np.array([1,1,  1.007, 1.018, 1.029, 1.041, 1.066, 1.087, 1.124, 1.241])  # ECC Komhyr
@@ -49,6 +53,7 @@ def organize_metadata(dfm):
     dfm['rhlab'] = dfm['Relative humidity in laboratory during sonde flow rate calibration'].astype('float')
     dfm['plab'] = dfm['Background surface pressure (hPa)'].astype('float')
     dfm['tlab'] = dfm['Temperature in laboratory during sonde flow rate calibration'].astype('float')
+    dfm['iB2'] = dfm['Background sensor current before cell is exposed to ozone (microamperes)'].astype('float')
 
     dfm = dfm[(dfm.tlab < 30) & (dfm.tlab > 10)]
 
@@ -80,11 +85,12 @@ def pf_groundcorrection(df, phim, unc_phim, tlab, plab, rhlab):
     :param rhlab:
     :return:
     """
+    df['TLab'] = df['TLab'].astype('float')
 
     df['x'] = ((7.5 * df['TLab']) / (df['TLab'] + 237.3)) + 0.7858
     df['psaturated'] = 10 ** (df['x'])
-    df['cph'] = (1 - df['ULab'] / 100) \
-                    * df['psaturated'] / df['Pground']
+    df['cph'] = (1 - df['ULab'].astype('float') / 100) \
+                    * df['psaturated'] / df['Pground'].astype('float')
 
     df['tlabK'] = df[tlab] + k
     df['cPL'] = 2/df['tlabK']
@@ -157,6 +163,9 @@ def pumpflow_efficiency(df, pair,  pumpcorrectiontag, effmethod ):
         if pumpcorrectiontag == 'komhyr_95':
             df['Cpf'], df['unc_Cpf'] = VecInterpolate(pval, komhyr_95, komhyr_95_unc,  df, pair, 0)
 
+        if pumpcorrectiontag == 'sodankayl':
+            df['Cpf'], df['unc_Cpf'] = VecInterpolate(pval_sod, corr_sod, corr_sod_unc,  df, pair, 0)
+
     return df['Cpf'], df['unc_Cpf']
 
 def return_phipcor(df,phip_grd, unc_phip_grd, cpf, unc_cpf):
@@ -169,70 +178,6 @@ def return_phipcor(df,phip_grd, unc_phip_grd, cpf, unc_cpf):
 
 
 
-#
-# def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, effmethod, out, unc_out):
-#     """
-#     :param df:
-#     :param pair:
-#     :param phip:
-#     :param pumpcorrectiontag:
-#     :param effmethod:
-#     :return: df[phipcor], df[unc_phip]
-#
-#     """
-#
-#     if effmethod == 'polyfit':
-#
-#         if pumpcorrectiontag == 'komhyr_95':
-#
-#             df['PCF'] = 2.17322861 - 3.686021555 * np.log10(df[pair]) + 5.105113826 * (
-#                 np.log10(df[pair])) ** 2 - 3.741595297 * (np.log10(df[pair])) ** 3 + 1.496863681 * (np.log10(df[pair]))**4 - \
-#                         0.3086952232 * (np.log10(df[pair])) ** 5 + 0.02569158956 * (np.log10(df[pair])) ** 6
-#             df['dPCF'] = 0.07403603165-0.08532895578*np.log10(df[pair])+0.03463984997*(np.log10(df[pair]))**2 - 0.00462582698 *(np.log10(df[pair]))**3
-#
-#             df[out] = df[phip]/df['PCF']
-#             # df['unc_phipcor'] = df['dPCF']**2/df['PCF']**2
-#             df[unc_out] = df[unc_phip]**2 + df['dPCF']**2/df['PCF']**2
-#
-#     if effmethod == 'table_interpolate':
-#
-#         if pumpcorrectiontag == 'komhyr_86':
-#             df['Cpf'] = VecInterpolate(pval, komhyr_86, df[pair], 0)
-#                 df.loc[filt, 'unc_phipcor'] = 0
-#
-#
-#     if effmethod == 'table':
-#
-#         if pumpcorrectiontag == 'RS41':
-#             for j in range(len(RS41_pval) - 1):
-#                 filt = (df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1])
-#                 df.loc[filt,out] = df.loc[filt, phip] / RS41_cor[j]
-#                 df.loc[filt, 'unc_phipcor'] = 0
-#
-#         else:
-#             for i in range(len(pval) - 1):
-#                 filt = (df[pair] < pval[i]) & (df[pair] >= pval[i + 1])
-#
-#                 if pumpcorrectiontag == 'komhyr_86':
-#                     df.loc[filt,out] = df.loc[filt, phip] / komhyr_86[i]
-#                     df.loc[filt, 'unc_phipcor'] = komhyr_86_unc[i]
-#                 if pumpcorrectiontag == 'komhyr_95':
-#                     print(i, 'komhyr 95', pval[i],  pval[i + 1],  komhyr_95[i])
-#                     df.loc[filt,out] = df.loc[filt, phip] / komhyr_95[i]
-#                     df.loc[filt, 'unc_phipcor'] = komhyr_95_unc[i]
-#                 if pumpcorrectiontag == 'john_02':
-#                     df.loc[filt,out] = df.loc[filt, phip] / john_02[i]
-#                     df.loc[filt, 'unc_phipcor'] = john_02_unc[i]
-#                 if pumpcorrectiontag == 'sbrecht_98':
-#                     df.loc[filt,out] = df.loc[filt, phip] / sbrecht_98[i]
-#                     df.loc[filt, 'unc_phipcor'] = sbrecht_98_unc[i]
-#                 if pumpcorrectiontag == 'kob_66':
-#                     df.loc[filt,out] = df.loc[filt, phip] / kob_66[i]
-#                     df.loc[filt, 'unc_phipcor'] = kob_66_unc[i]
-#
-#     # df[unc_out] = df[phip] * np.sqrt((df[unc_phip] / df[phip]) ** 2 + (df['unc_phipcor'] / df[out]) ** 2)
-#
-#     return df[out], df[unc_out]
 
 
 def background_correction(df, dfmeta, ib,):
@@ -370,7 +315,7 @@ def absorption_efficiency (df, pair, solvolume):
     return df['alpha_o3'], df['unc_alpha_o3']
 
 
-def stoichemtry_conversion(df, pair, sensortype, solutionconcentration, reference):
+def stoichmetry_conversion(df, pair, sensortype, solutionconcentration, reference):
     '''
     :param pair: Pressure of the air
     :param sondesstone: an array of the Sonde type and SST i.e: ['SPC', '0.5'] that was in use
@@ -381,12 +326,14 @@ def stoichemtry_conversion(df, pair, sensortype, solutionconcentration, referenc
 
     df['stoich'] = 0
     df['unc_stoich'] = 0.05
+    solutionconcentration = float(solutionconcentration)
+
 
     if (reference == 'ENSCI05') & (sensortype == 'DMT-Z') & (solutionconcentration == 10):
         df.loc[df[pair] >= 30, 'stoich'] = 0.96
         df.loc[df[pair] < 30, 'stoich'] = 0.90 + 0.041 * np.log10(df[df[pair] < 30][pair])
 
-    if (reference == 'ENSCI05') & (sensortype == 'DMT-Z') & (solutionconcentration == 5):
+    if (reference == 'ENSCI05') & (sensortype == 'DMT-Z') & (solutionconcentration == 5.0):
         df['stoich'] = 1
         df['unc_stoich'] = 0.03
 
@@ -416,3 +363,71 @@ def conversion_efficiency(df, alpha_o3, alpha_unc_o3, stoich, stoich_unc):
 
 
     return df['eta_c'], df['unc_eta']
+
+
+
+
+#
+# def pf_efficiencycorrection(df, pair, phip, unc_phip, pumpcorrectiontag, effmethod, out, unc_out):
+#     """
+#     :param df:
+#     :param pair:
+#     :param phip:
+#     :param pumpcorrectiontag:
+#     :param effmethod:
+#     :return: df[phipcor], df[unc_phip]
+#
+#     """
+#
+#     if effmethod == 'polyfit':
+#
+#         if pumpcorrectiontag == 'komhyr_95':
+#
+#             df['PCF'] = 2.17322861 - 3.686021555 * np.log10(df[pair]) + 5.105113826 * (
+#                 np.log10(df[pair])) ** 2 - 3.741595297 * (np.log10(df[pair])) ** 3 + 1.496863681 * (np.log10(df[pair]))**4 - \
+#                         0.3086952232 * (np.log10(df[pair])) ** 5 + 0.02569158956 * (np.log10(df[pair])) ** 6
+#             df['dPCF'] = 0.07403603165-0.08532895578*np.log10(df[pair])+0.03463984997*(np.log10(df[pair]))**2 - 0.00462582698 *(np.log10(df[pair]))**3
+#
+#             df[out] = df[phip]/df['PCF']
+#             # df['unc_phipcor'] = df['dPCF']**2/df['PCF']**2
+#             df[unc_out] = df[unc_phip]**2 + df['dPCF']**2/df['PCF']**2
+#
+#     if effmethod == 'table_interpolate':
+#
+#         if pumpcorrectiontag == 'komhyr_86':
+#             df['Cpf'] = VecInterpolate(pval, komhyr_86, df[pair], 0)
+#                 df.loc[filt, 'unc_phipcor'] = 0
+#
+#
+#     if effmethod == 'table':
+#
+#         if pumpcorrectiontag == 'RS41':
+#             for j in range(len(RS41_pval) - 1):
+#                 filt = (df[pair] < RS41_pval[j]) & (df[pair] >= RS41_pval[j + 1])
+#                 df.loc[filt,out] = df.loc[filt, phip] / RS41_cor[j]
+#                 df.loc[filt, 'unc_phipcor'] = 0
+#
+#         else:
+#             for i in range(len(pval) - 1):
+#                 filt = (df[pair] < pval[i]) & (df[pair] >= pval[i + 1])
+#
+#                 if pumpcorrectiontag == 'komhyr_86':
+#                     df.loc[filt,out] = df.loc[filt, phip] / komhyr_86[i]
+#                     df.loc[filt, 'unc_phipcor'] = komhyr_86_unc[i]
+#                 if pumpcorrectiontag == 'komhyr_95':
+#                     print(i, 'komhyr 95', pval[i],  pval[i + 1],  komhyr_95[i])
+#                     df.loc[filt,out] = df.loc[filt, phip] / komhyr_95[i]
+#                     df.loc[filt, 'unc_phipcor'] = komhyr_95_unc[i]
+#                 if pumpcorrectiontag == 'john_02':
+#                     df.loc[filt,out] = df.loc[filt, phip] / john_02[i]
+#                     df.loc[filt, 'unc_phipcor'] = john_02_unc[i]
+#                 if pumpcorrectiontag == 'sbrecht_98':
+#                     df.loc[filt,out] = df.loc[filt, phip] / sbrecht_98[i]
+#                     df.loc[filt, 'unc_phipcor'] = sbrecht_98_unc[i]
+#                 if pumpcorrectiontag == 'kob_66':
+#                     df.loc[filt,out] = df.loc[filt, phip] / kob_66[i]
+#                     df.loc[filt, 'unc_phipcor'] = kob_66_unc[i]
+#
+#     # df[unc_out] = df[phip] * np.sqrt((df[unc_phip] / df[phip]) ** 2 + (df['unc_phipcor'] / df[out]) ** 2)
+#
+#     return df[out], df[unc_out]

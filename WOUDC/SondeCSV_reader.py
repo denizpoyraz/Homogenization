@@ -63,20 +63,6 @@ for filename in allFiles:
             # print(fi, " , " , mstr, " , ", kstr , " , ", extcsv_to.sections[dict][list(keys)[j]])
             dfm.at[fi, astr] = extcsv_to.sections[dict][list(keys)[j]]
 
-    #changes in the operation procedure
-    # check this information from the data-sheets provided by the station
-    # to be implemented by hand
-###
-    # dfm.at[fi,'SondeTypeChange'] = False
-    # dfm.at[fi,'SSTChange'] = False
-    # dfm.at[fi,'BkgCurrentChange'] = 'iB2toiB0_2003'
-    # dfm.at[fi,'BkgCurrentCorrectionChange'] = 'AltDeptoConstant_2003'
-    # dfm.at[fi,'PumpTempLocationChange'] = 'BoxtoHole_19970131'
-    # dfm.at[fi,'PumpFlowMeasChange'] = False
-    # dfm.at[fi,'PumpFlowEfficiencyChange'] = False
-    # dfm.at[fi,'TONChange'] = 'DobsontoBrewer_2000'
-    # dfm.at[fi,'RSChange'] = True
-###
 
     dfprofile = StringIO(Profile)
     df = pd.read_csv(dfprofile)
@@ -105,3 +91,19 @@ dff = pd.concat(list_data,ignore_index=True)
 dfm.to_csv("/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_" + station + "_All_metadata.csv")
 dff.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/DF_' + station + '_All.h5', key='df', mode='w')
 
+#######################################################################################################################
+
+    #changes in the operation procedure
+    # check this information from the data-sheets provided by the station
+    # to be implemented by hand
+###
+    # dfm.at[fi,'SondeTypeChange'] = False
+    # dfm.at[fi,'SSTChange'] = False
+    # dfm.at[fi,'BkgCurrentChange'] = 'iB2toiB0_2003'
+    # dfm.at[fi,'BkgCurrentCorrectionChange'] = 'AltDeptoConstant_2003'
+    # dfm.at[fi,'PumpTempLocationChange'] = 'BoxtoHole_19970131'
+    # dfm.at[fi,'PumpFlowMeasChange'] = False
+    # dfm.at[fi,'PumpFlowEfficiencyChange'] = False
+    # dfm.at[fi,'TONChange'] = 'DobsontoBrewer_2000'
+    # dfm.at[fi,'RSChange'] = True
+###
