@@ -6,6 +6,9 @@ from pathlib import Path
 
 from utils import get_arguments
 
+path = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp.cpc.ncep.noaa.gov/ndacc/station/sodanky/ames/o3sonde'
+
+
 station = 'Sodankyl'
 
 @dataclass
@@ -31,18 +34,20 @@ def convert_ozonedata(files: List[Path]) -> None:
 
     j = 0
     for file in files:
-        print(file)
-        tmp = file.name.split(".")[0][2:8]
+        print('file',file)
+        tmp = file.name.split(".b")[0][2:8]
         fileout = file
 
         datelist[j] = tmp
-        # print(j)
+        print(j)
         if(j > 0) and (j < (size-1)):
             if (datelist[j] == datelist[j-1]):
                 # print(file)
-                tmp = files[j].name.split(".")[0] + "_2nd." + files[j].name.split(".")[1]
+                tmp = files[j].name.split(".b")[0] + "_2nd." + files[j].name.split(".")[1]
                 fileout = str(files[j].parent) + "/" + tmp
                 fileout = Path(fileout)
+                print('zero', fileout)
+
         j = j+1
 
         with open(file, 'r', encoding='ISO-8859-1') as rfile:
@@ -56,15 +61,18 @@ def convert_ozonedata(files: List[Path]) -> None:
         # Write data to hdf and metadata to csv
         constants = extract_constants_from_header(header.meta_data)
         dfm = extract_constants_from_header(header.meta_data)
-
+        print('one',fileout)
         # pd.Series(constants).to_csv(file.with_suffix('.csv'), header=False)
         filename = str(fileout)
-        filenamecsv = filename.split(".")[-2] + ('_md.csv')
-        filenamehdf = filename.split(".")[-2] + ('_md.hdf')
+        print('two',filename)
+
+        filenamecsv = filename.split(".b")[-2] + ('_md.csv')
+        filenamehdf = filename.split(".b")[-2] + ('_md.hdf')
         # #
+        # print(filenamehdf)
         pd.Series(constants).to_csv(filenamecsv, header=False)
         pd.Series(constants).to_hdf(filenamehdf, key = 'df')
-
+        # print('fileout', fileout)
         df.to_hdf(fileout.with_suffix('.hdf'), key='df')
         df.to_csv(fileout.with_suffix('.csv'))
 

@@ -7,9 +7,8 @@ from datetime import datetime
 import time
 
 from Nilu.Homogenisation_Functions import po3tocurrent, absorption_efficiency, stoichmetry_conversion, conversion_efficiency, \
-    background_correction, \
-    pumptemp_corr, currenttopo3, pf_groundcorrection, organize_metadata, calculate_cph, pumpflow_efficiency, \
-    return_phipcor
+    background_correction,pumptemp_corr, currenttopo3, pf_groundcorrection, organize_metadata, calculate_cph, pumpflow_efficiency, \
+    return_phipcor, RS_pressurecorrection
 
 # pf_efficiencycorrection
 
@@ -36,7 +35,7 @@ print('cph std', dfmeta['cph'].std(), 'cpl std', dfmeta['cpl'].std())
 # print(np.nanmean(dfmeta['cph']), np.nanmedian(dfmeta['cph']), dfmeta.cph.std(),   cph_average, cph_unc)
 
 allFiles = sorted(
-    glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/Current/SO021225*rawcurrent.hdf"))
+    glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/Current/*rawcurrent.hdf"))
 
 list_data = []
 list_datall = []
@@ -45,7 +44,7 @@ size = len(allFiles)
 datelist = [0] * size
 j = 0
 
-
+bool_rscorrection = True
 
 
 for filename in allFiles:
@@ -53,7 +52,7 @@ for filename in allFiles:
     file = open(filename, 'r')
     date_tmp = filename.split('/')[9].split('_')[0][2:8]
 
-    # print(filename)
+    print(filename)
 
     date = datetime.strptime(date_tmp, '%y%m%d')
 
@@ -82,12 +81,20 @@ for filename in allFiles:
     df['Tpump'] = df['Tbox']
     df['Phip'] = 100 / df['PF']
     df['Eta'] = 1
-    df['P'] = df['Pair']
 
     df['unc_Phip'] = 0.02
     df['unc_Tpump'] = 1
     df['unc_cph'] = dfmeta.at[dfmeta.first_valid_index(), 'unc_cph']
     df['unc_cpl'] = dfmeta.at[dfmeta.first_valid_index(), 'unc_cpl']
+
+    #                                   #
+    #      radiosonde RS80 correction   #
+    #                                   #
+    # if bool_rscorrection == 'True':
+    try: rsmodel = df.at[df.first_valid_index(), 'RadiosondeModel']
+    except KeyError: rsmodel = 'RS92'
+    df['Crs'], df['unc_Crs'] = RS_pressurecorrection(df, 'Height', rsmodel)
+    df['Pair'] = df['Pair'] - df['Crs']
 
 
     #                                   #
@@ -96,16 +103,16 @@ for filename in allFiles:
     df['alpha_o3'], df['unc_alpha_o3'] = absorption_efficiency(df, 'Pair', 'SolutionVolume')
     df['stoich'], df['unc_stoich'] = stoichmetry_conversion(df, 'Pair', df.at[df.first_valid_index(), 'SensorType'],
                                                             df.at[df.first_valid_index(), 'SolutionConcentration'], 'ENSCI05')
-    if df.at[df.first_valid_index(), 'stoich'] != 1: print('stoich', filename)
     df['eta_c'], df['unc_eta_c'] = conversion_efficiency(df, 'alpha_o3', 'unc_alpha_o3', 'stoich', 'unc_stoich')
 
     #                                   #
     #       background correction       #
     #                                   #
     df['iBc'], df['unc_iBc'] = background_correction(df, dfmeta, 'iB2')
-    # if (df.at[df.first_valid_index(),'PumpTempLoc'] == 'Pump hole') | (df.at[df.first_valid_index(),'PumpTempLoc'] == 'Pump hole'):
-    #     boxlocation = 'internalpump'
-    df['Tpump_cor'], df['unc_Tpump_cor'] = pumptemp_corr(df, 'internalpump', 'Tpump', 'unc_Tpump', 'P')
+    #                                   #
+    #       pump temperature correction       #
+    #                                   #
+    df['Tpump_cor'], df['unc_Tpump_cor'] = pumptemp_corr(df, 'internalpump', 'Tpump', 'unc_Tpump', 'Pair')
 
     #                                   #
     #      pump flow corrections        #
@@ -119,15 +126,15 @@ for filename in allFiles:
     pumpflowtable = ''
     if df.at[df.first_valid_index(), 'SensorType'] == 'SPC': pumpflowtable = 'komhyr_86'
     if df.at[df.first_valid_index(), 'SensorType'] == 'DMT-Z': pumpflowtable = 'komhyr_95'
-    df['Cpf'], df['unc_Cpf'] = pumpflow_efficiency(df, 'P', pumpflowtable, 'table_interpolate')
+    df['Cpf'], df['unc_Cpf'] = pumpflow_efficiency(df, 'Pair', pumpflowtable, 'table_interpolate')
     df['Phip_cor'], df['unc_Phip_cor'] = return_phipcor(df, 'Phip_ground', 'unc_Phip_ground', 'Cpf', 'unc_Cpf')
     df['Phip_PF'] = df['Phip'] / df['Cpf']
 
     # all corrections
-    # df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'eta_c', 'Phip_cor', False)
+    df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'eta_c', 'Phip_cor', False)
 
     # one correction only
-    df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'eta_c', 'Phip_PF', False)
+    # df['O3c'] = currenttopo3(df, 'I', 'Tpump_cor', 'iBc', 'eta_c', 'Phip_PF', False)
     # df['O3st'] = currenttopo3(df, 'I', 'Tpump', 'iB2', 'Eta', 'Phip', False)
 
 
@@ -140,10 +147,14 @@ for filename in allFiles:
     df['dEta'] = (df['unc_eta_c'] / df['unc_eta_c']) ** 2
     df['dPhi_cor'] = (df['unc_Phip_cor'] / df['Phip_cor']) ** 2
     df['dTpump_cor'] = (df['unc_Tpump_cor'] / df['Tpump_cor']) ** 2
+    if bool_rscorrection: df['dPrs'] = (df['unc_Crs']/df['Crs'])**2
     # final uncertainity on O3
     df['dO3'] = np.sqrt(df['dIall'] + df['dEta'] + df['dPhi_cor'] + df['dTpump_cor'])
+    if bool_rscorrection: df['dO3'] = np.sqrt(df['dIall'] + df['dEta'] + df['dPhi_cor'] + df['dTpump_cor'] + df['dPrs'])
 
-    df.to_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/All/' + datestr + "_test_dqa_nogroundcorr.csv")
+    df.to_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/All/' + datestr + "_all_dqa_rs92.csv")
+    df.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/All/' + datestr + "_all_dqa_rs92.hdf", key = 'df')
+
     # list_data.append(df)
 
 
@@ -154,18 +165,16 @@ for filename in allFiles:
 
     df = df.drop(
         ['SolutionVolume', 'SolutionConcentration', 'Pground', 'TLab', 'ULab', 'PumpTable', 'SerialECC', 'SensorType',
-         'Cef', 'ibg', 'Pcor', 'Datedt', 'Tpump', 'Phip', 'Eta', 'P', 'unc_Phip', 'unc_Tpump', 'unc_cph', 'unc_cpl',
-         'unc_alpha_o3',
-         'alpha_o3', 'stoich', 'unc_stoich', 'eta_c', 'unc_eta', 'unc_eta_c', 'iBc', 'unc_iBc', 'Tpump_cor',
-         'unc_Tpump_cor',
-         'deltat', 'unc_deltat', 'deltat_ppi', 'unc_deltat_ppi', 'x', 'psaturated', 'cph', 'tlabK', 'cPL',
-         'Phip_ground',
-         'unc_Phip_ground', 'Cpf', 'unc_Cpf', 'Phip_cor', 'unc_Phip_cor', 'O3c', 'dIall', 'dEta', 'dPhi_cor',
-         'dTpump_cor'], axis=1)
+         'Cef', 'ibg', 'Pcor', 'Datedt', 'Tpump', 'Phip', 'Eta', 'unc_Phip', 'unc_Tpump', 'unc_cph', 'unc_cpl',
+         'unc_alpha_o3', 'alpha_o3', 'stoich', 'unc_stoich', 'eta_c', 'unc_eta', 'unc_eta_c', 'iBc', 'unc_iBc', 'Tpump_cor',
+         'unc_Tpump_cor','deltat', 'unc_deltat', 'deltat_ppi', 'unc_deltat_ppi', 'x', 'psaturated', 'cph', 'tlabK', 'cPL',
+         'Phip_ground', 'Cef', 'ibg', 'Pcor', 'unc_Phip_ground', 'Cpf', 'unc_Cpf', 'Phip_cor', 'unc_Phip_cor', 'O3c',
+         'dIall', 'dEta', 'dPhi_cor', 'dTpump_cor', 'Crs', 'unc_Crs'], axis=1)
+    # 'Crs', 'unc_Crs',
 
     # print(list(df))
 
-    df.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/' + datestr + '_test_dqa_nogroundcorr.h5',
+    df.to_hdf('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/' + datestr + '_dqa_rs92.h5',
               key='df', mode='w')
     # df.to_csv('/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/DQA/' + datestr + "_corrected_dqa.csv")
 

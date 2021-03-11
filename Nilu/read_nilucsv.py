@@ -4,7 +4,8 @@ import math
 import numpy as np
 from re import search
 from datetime import datetime
-# ndacc wget --mirror --no-parent https://woudc.org/archive/NDACC/station/sodanky/ames/o3sonde/
+# ndacc
+# https://woudc.org/archive/NDACC/station/sodanky/ames/o3sonde/
 
 
 __MissingData__ = -32768.0
@@ -42,6 +43,13 @@ def organize_df(df1, df2):
         if (search('Geopotential', list1[i])) and (search('height', list1[i])):
             height = list1[i]
             df_out['Height'] = df1[height]
+        if (search('wind ', list1[i])) and (search('direction', list1[i])):
+            windd = list1[i]
+            df_out['WindDirection'] = df1[windd]
+        if (search('wind ', list1[i])) and (search('speed', list1[i])):
+            winds = list1[i]
+            df_out['WindSpeed'] = df1[winds]
+
 
     list2 = list(df2)
     for j in range(len(list2)):
@@ -75,6 +83,61 @@ def organize_df(df1, df2):
         if (search('Ozone', list2[j])) and (search('sensor', list2[j])):
             sensor = list2[j]
             df_out['SensorType'] = df2.at[df2.first_valid_index(), sensor]
+
+        if (search('Serial number', list2[j])) and ((search('RS-80', list2[j]))):
+            rs80 = 'RS80'
+            df_out['RadiosondeModel'] = rs80
+
+        # if not (search('Serial number', list2[j])) and ((search('RS-80', list2[j]))) :
+        #     rs92 = 'RS92'
+        #     df_out['RadiosondeModel'] = rs92
+        #     print('rs92')
+
+        if (search('Serial number', list2[j])) and ((search('RS', list2[j])) or (search('radiosonde', list2[j])) or (search('Radiosonde',list2[j]))):
+            try:
+                df_out['RadiosondeSerial'] = df2.at[df2.first_valid_index(), list2[j]]
+            except KeyError:
+                df_out['RadiosondeSerial'] = '9999'
+
+        # if (search('Interface parameter', list2[j]) and (search('interface', list2[j])) ):
+        if ((search('interface', list2[j]) or(search('Interface',list2[j]))) and not(search('parameter', list2[j]))):
+
+            if(list2[j] != 'Serial number of interface card'): print('interface',list2[j])
+            df_out['InterfaceSerial'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Surface', list2[j])) or ((search('surface', list2[j])) and (search('ozone', list2[j])) or
+                        (search('Ozone',list2[j]))) and not (search('Time', list2[j])) and not (search('sensor', list2[j])):
+            # print('surface ozone', list2[j])
+            df_out['SurfaceOzone'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('round equipment', list2[j])) or (search('equipment', list2[j])):
+            df_out['GroundEquipment'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Correction factor ', list2[j])) or (search('correction factor', list2[j])):
+            df_out['CorrectionFactor'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Total ozone', list2[j])) and (search('sonde', list2[j])):
+            df_out['SondeTotalO3'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Background', list2[j])) and (search('correction', list2[j])):
+            df_out['BackgroundCorrection'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Launch time', list2[j])) :
+            df_out['LaunchTime'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Longitude', list2[j])) or  (search('longitude', list2[j])):
+            df_out['Longitude'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Latitude', list2[j])) or  (search('latitude', list2[j])):
+            df_out['Latitude'] = df2.at[df2.first_valid_index(), list2[j]]
+
+        if (search('Time',list2[j])) and (search('sonde',list2[j])) and (search('surface ozone', list2[j])):
+            df_out['DurationSurfaceOzoneExposure'] = df2.at[df2.first_valid_index(), list2[j]]
+            # 'Time the sonde was run for surface ozone (min)'
+
+
+        # if (search('Total ozone', list2[j])) and (search('Dobson/Brewer', list2[j])) and (search('daily', list2[j])):
+        #     df_out['TotalOzone'] = df2.at[df2.first_valid_index(), list2[j]]
 
         if not((search('Ozone', list2[j])) and (search('sensor', list2[j]))) and (search('Serial number of ECC', list2[j])) :
             serial = list2[j]
@@ -115,8 +178,7 @@ def organize_df(df1, df2):
             u_lab = list2[j]
             df_out['ULab'] = df2.at[df2.first_valid_index(), u_lab]
 
-        if (search('Pump', list2[j])) and (search('correction', list2[j])) and (
-        search('table', list2[j])):
+        if (search('Pump', list2[j])) and (search('correction', list2[j])):
             pump_table = list2[j]
             df_out['PumpTable'] = df2.at[df2.first_valid_index(), pump_table]
 
@@ -260,8 +322,10 @@ def ComputeCorP(dft, Pressure):
 
 
 ##read datafiles
-allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
-metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
+# allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
+allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/sodanky/ames/o3sonde/so97*.hdf"))
+
+# metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
 
 list_data = []
 list_raw = []
@@ -272,13 +336,13 @@ for filename in (allFiles):
     fname = filename.split(".")[-2].split("/")[-1]
     print(fname)
 
-    metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/metadata/' + fname + "_md.csv"
-    # metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Uccle/metadata/' + fname + "_md.csv"
+    # metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/metadata/' + fname + "_md.csv"
+    metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/sodanky/ames/o3sonde/' + fname + "_md.csv"
 
     date = datetime.strptime(name, '%y%m%d')
     datef = date.strftime('%Y%m%d')
 
-    dfd = pd.read_csv(filename)
+    dfd = pd.read_hdf(filename)
     if(len(dfd) < 300): continue
     if len(dfd.columns) < 8: continue
     try:
@@ -306,12 +370,13 @@ for filename in (allFiles):
     metaname = filename.split(".")[-2].split("/")[-1] + "_metadata.csv"
 
     # pname = filename.split(".")[-2].split("s")[0]
-    pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
-    # pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Uccle/'
+    # pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
+    pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/sodanky/ames/o3sonde/'
+    print('raw', rawname)
 
     #
     dfl.to_hdf(pname + '/Current/' + rawname, key = 'df')
-    dfm.to_csv(pname + '/Current/' + metaname)
+    dfm.to_csv(pname + '/Metadata/' + metaname)
 
 
     list_data.append(dfm)
@@ -320,13 +385,13 @@ for filename in (allFiles):
 # efile.close()
 
 
-dff = pd.concat(list_data,ignore_index=True)
-hdfall = pname + "All_metedata.hdf"
-
-dff.to_hdf(hdfall, key = 'df')
-
-dfr = pd.concat(list_raw,ignore_index=True)
-hdfraw = pname + "Sodankyl_rawdata.hdf"
-
-dfr.to_hdf(hdfraw, key = 'df')
+# dff = pd.concat(list_data,ignore_index=True)
+# hdfall = pname + "All_metedata.hdf"
+#
+# dff.to_hdf(hdfall, key = 'df')
+#
+# dfr = pd.concat(list_raw,ignore_index=True)
+# hdfraw = pname + "Sodankyl_rawdata.hdf"
+#
+# dfr.to_hdf(hdfraw, key = 'df')
 

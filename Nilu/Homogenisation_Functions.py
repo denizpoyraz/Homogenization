@@ -42,6 +42,17 @@ RS41_pval = np.array([2.0, 3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 100.0, 200.0, 300.0
 RS41_cor = np.flipud(RS41_cor)
 RS41_pval = np.flipud(RS41_pval)
 
+RS80_cor = np.array([0, -0.34, 0.05, -0.17, -0.47, -0.61, -0.70, -0.83, -0.85, -0.91, -0.94, -0.97, -0.98, -1.02, -1.02, -1.01, -0.94, -0.94,
+-1.01, -0.95,-1.00, -0.96, -0.98, -0.99, -1.00, -0.99, -1.01, -1.00, -1.06, -1.01, -1.04, -1.02, -0.97])
+RS80_cor_err = np.array([0, 1.57, 1.56, 1.46, 1.43, 1.33, 1.26, 1.26, 1.21, 1.17, 1.14, 1.15, 1.16, 1.16, 1.17, 1.29, 1.28, 1.20, 1.29, 1.41,
+1.36, 1.23, 1.31, 1.30, 1.39, 1.33, 1.35, 1.38, 1.40, 1.44, 1.60])
+RS92_cor = np.array([0, 1.11, 0.56, 0.35, 0.23, 0.07, -0.03, -0.11, -0.16, -0.21, -0.26, -0.27, -0.27, -0.24, -0.28, -0.27,
+-0.25, -0.24, -0.22, -0.20, -0.19, -0.17, -0.15, -0.14, -0.14, -0.13, -0.12, -0.12, -0.12, -0.11, -0.11])
+RS92_cor_err = np.array([0, 1.42, 1.41, 1.17, 1.03, 0.92, 0.85, 0.78, 0.75, 0.70, 0.65, 0.62, 0.58, 0.75, 0.50, 0.47, 0.45,
+0.42, 0.40, 0.35, 0.34, 0.31, 0.30, 0.28, 0.27, 0.27, 0.27, 0.27, 0.26, 0.26, 0.25])
+RS_alt = np.array([0, 1,2,3,4,5,6,7,8,9,10,11,12,13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
+RS_alt = [i * 1000 for i in RS_alt]
+
 k = 273.15
 
 def func_ptoi(df, po3, tpump, etac, phip, ib):
@@ -106,7 +117,7 @@ def pf_groundcorrection(df, phim, unc_phim, tlab, plab, rhlab):
 
 def VecInterpolate(XValues, YValues, unc_YValues, dft, Pair, LOG):
 
-    dft['Cef'] = 0
+    # dft['Cef'] = 0
 
     i = 1
     # ilast = len(YValues) - 1
@@ -141,6 +152,45 @@ def VecInterpolate(XValues, YValues, unc_YValues, dft, Pair, LOG):
 
     return dft['Cpf'], dft['unc_Cpf']
 
+def RS_pressurecorrection(dft, height, radiosondetype):
+
+    dft = dft.reset_index()
+
+    dft['Crs'] = 0.0
+    dft['unc_Crs'] = 0.0
+
+    for k in range(len(dft)):
+
+        if radiosondetype == 'RS80':
+            RS_cor = RS80_cor
+            RS_cor_err = RS80_cor_err
+
+        if radiosondetype == 'RS92':
+            RS_cor = RS92_cor
+            RS_cor_err = RS92_cor_err
+
+        for i in range(len(RS_alt) - 1):
+            # just check that value is in between xvalues
+            if (RS_alt[i] <= dft.at[k, height] < RS_alt[i + 1]):
+
+                x1 = float(RS_alt[i])
+                x2 = float(RS_alt[i + 1])
+
+                y1 = float(RS_cor[i])
+                y2 = float(RS_cor[i + 1])
+
+                unc_y1 = float(RS_cor_err[i])
+                unc_y2 = float(RS_cor_err[i + 1])
+
+                dft.at[k, 'Crs'] = float(y1 + (dft.at[k, height] - x1) * (y2 - y1) / (x2 - x1))
+                dft.at[k, 'unc_Crs'] = float(unc_y1 + (dft.at[k, height] - x1) * (unc_y2 - unc_y1) / (x2 - x1))
+                # print('what', dft.at[k, 'Crs'].astype('float'))
+
+    # if radiosondetype != 'RS80':
+    #     dft['Crs'] = 0
+    #     dft['unc_Crs'] = 0
+
+    return dft['Crs'], dft['unc_Crs']
 
 def pumpflow_efficiency(df, pair,  pumpcorrectiontag, effmethod ):
 
@@ -324,7 +374,7 @@ def stoichmetry_conversion(df, pair, sensortype, solutionconcentration, referenc
     '''
 
 
-    df['stoich'] = 0
+    df['stoich'] = 1
     df['unc_stoich'] = 0.05
     solutionconcentration = float(solutionconcentration)
 
@@ -358,7 +408,7 @@ def conversion_efficiency(df, alpha_o3, alpha_unc_o3, stoich, stoich_unc):
     :return: total efficiency of the conversion etac_c and its uncertainity Eq. 4 from the guideline
     '''
 
-    df['eta_c'] = df[alpha_o3] * df[stoich]
+    df['eta_c'] = df[alpha_o3] / df[stoich]
     df['unc_eta'] = df['eta_c'] * np.sqrt((df[alpha_unc_o3] / df[alpha_o3]) ** 2 + (df[stoich_unc] / df[stoich]) ** 2)
 
 
