@@ -50,9 +50,9 @@ for filename in allFiles:
     # dfpl.at[i,'iB2'] = df.at[df.first_valid_index(),'iB2']
     # dfpl.at[i,'PF'] = df.at[df.first_valid_index(),'PF']
 
-    dfpl.at[i,'iB0'] = df.at[df.first_valid_index(),'ULab']
-    dfpl.at[i,'iB2'] = df.at[df.first_valid_index(),'ULab']
-    dfpl.at[i,'PF'] = df.at[df.first_valid_index(),'ULab']
+    dfpl.at[i,'iB0'] = df.at[df.first_valid_index(),'Pground']
+    dfpl.at[i,'iB2'] = df.at[df.first_valid_index(),'Pground']
+    dfpl.at[i,'PF'] = df.at[df.first_valid_index(),'Pground']
 
 
     i = i+1
@@ -70,11 +70,11 @@ fig, ax = plt.subplots()
 
 plt.fill_between(dfpl.index, dfpl.iB0.mean()-2 * dfpl.iB0.std(), dfpl.iB0.mean()+ 2 *dfpl.iB0.std(), facecolor='#1f77b4', alpha=.2, label = r"Mean$\pm$2sigma")
 
-plt.plot(dfpl.index, dfpl.iB0,  label="ULab", linestyle = 'None', color = '#1f77b4',  marker="o", markersize = 3)
-ax.axhline(y=dfpl.iB0.median(), color='grey', label = "Median ULab")
-ax.axhline(y=dfpl.iB0.mean() + dfpl.iB0.std(), color='#1f77b4',linestyle='--', label = "Mean ULab + 1sigma")
-ax.axhline(y=dfpl.iB0.mean(), color='#1f77b4', label = "Mean ULab")
-ax.axhline(y=dfpl.iB0.mean() - dfpl.iB0.std(), color='#1f77b4',linestyle='--', label = "Mean ULab - 1sigma")
+plt.plot(dfpl.index, dfpl.iB0,  label="PLab", linestyle = 'None', color = '#1f77b4',  marker="o", markersize = 3)
+ax.axhline(y=dfpl.iB0.median(), color='grey', label = "Median PLab")
+ax.axhline(y=dfpl.iB0.mean() + dfpl.iB0.std(), color='#1f77b4',linestyle='--', label = "Mean PLab + 1sigma")
+ax.axhline(y=dfpl.iB0.mean(), color='#1f77b4', label = "Mean PLab")
+ax.axhline(y=dfpl.iB0.mean() - dfpl.iB0.std(), color='#1f77b4',linestyle='--', label = "Mean PLab - 1sigma")
 
 
 # plt.fill_between(dfpl.index, dfpl.iB2.mean()-2*dfpl.iB2.std(), dfpl.iB2.mean()+2*dfpl.iB2.std(), facecolor='#ff7f0e', alpha=.2,  label = r"Mean$\pm$2sigma")
@@ -99,10 +99,10 @@ ax.axhline(y=dfpl.iB0.mean() - dfpl.iB0.std(), color='#1f77b4',linestyle='--', l
 # ax.axhline(y=dfpl.PF.mean() - dfpl.PF.std(), color='#1f77b4',linestyle='--', label = "Mean PF - 1sigma")
 
 
-plt.title('Sodankyla ULab values')
+plt.title('Sodankyla PLab values')
 ax.legend(loc='best', frameon=True, fontsize='small')
 
-plotname = 'ULab_timeseries'
+plotname = 'PLab_timeseries'
 
 plt.savefig('/home/poyraden/Analysis/Homogenization_Analysis/Plots/Sodankyl/' + plotname + '.pdf')
 plt.savefig('/home/poyraden/Analysis/Homogenization_Analysis/Plots/Sodankyl/' + plotname + '.eps')

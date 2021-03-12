@@ -36,7 +36,7 @@ def organize_df(df1, df2):
 
         if (search('Temperature', list1[i])) and (search('inside', list1[i])):
             pump_temp = list1[i]
-            df_out['Tbox'] = df1[pump_temp] + K
+            df_out['Tbox'] = df1[pump_temp].astype('float') + K
         if (search('Time', list1[i])) and (search('after', list1[i])):
             time = list1[i]
             df_out['Time'] = df1[time]
@@ -148,6 +148,7 @@ def organize_df(df1, df2):
             if (df2.at[df2.first_valid_index(), serial][0] == "4"): df_out['SensorType'] = 'SPC-4A'
             if (df2.at[df2.first_valid_index(), serial][0] == "5"): df_out['SensorType'] = 'SPC-5A'
             if (df2.at[df2.first_valid_index(), serial][0] == "6"): df_out['SensorType'] = 'SPC-6A'
+            if (df2.at[df2.first_valid_index(), 'Pump correction table'] == "SPC_ECC"): df_out['SensorType'] = 'SPC-6A'
 
 
         if (search('Background', list2[j])) and (search('surface pressure', list2[j])):
@@ -182,11 +183,13 @@ def organize_df(df1, df2):
             pump_table = list2[j]
             df_out['PumpTable'] = df2.at[df2.first_valid_index(), pump_table]
 
-    df_out['Pair'] = df1['Pressure at observation (hPa)']
-    df_out['O3'] = df1['Ozone partial pressure (mPa)']
-    df_out['T'] = df1['Temperature (C)']
-    df_out['U'] = df1['Relative humidity (%)']
+    df_out['Pair'] = df1['Pressure at observation (hPa)'].astype('float')
+    df_out['O3'] = df1['Ozone partial pressure (mPa)'].astype('float')
+    df_out['T'] = df1['Temperature (C)'].astype('float')
+    # except KeyError: df_out['T'] = df1['Temperature(C)'].astype('float')
+    # df_out['U'] = df1['Relative humidity (%)'].astype('float')
     df_out['PF'] = df_out['PF'].astype('float')
+    # except KeyError: df_out['PF'] = 28.7
     df_out['iB0'] = df_out['iB0'].astype('float')
     df_out['iB2'] = df_out['iB2'].astype('float')
     df_out['Cef'] = 1
@@ -323,7 +326,7 @@ def ComputeCorP(dft, Pressure):
 
 ##read datafiles
 # allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/*.csv"))
-allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/sodanky/ames/o3sonde/so97*.hdf"))
+allFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/neumayer/ames/o3sonde/nm08*.csv"))
 
 # metaFiles = sorted(glob.glob("/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/" + station + "/metadata/*_md.csv"))
 
@@ -337,12 +340,16 @@ for filename in (allFiles):
     print(fname)
 
     # metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/metadata/' + fname + "_md.csv"
-    metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/sodanky/ames/o3sonde/' + fname + "_md.csv"
+    metafile = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/neumayer/ames/o3sonde/metadata/' + fname + "_md.csv"
 
     date = datetime.strptime(name, '%y%m%d')
     datef = date.strftime('%Y%m%d')
 
-    dfd = pd.read_hdf(filename)
+    dfd = pd.read_csv(filename, names=['Pressure at observation (hPa)', 'Time after launch (s)', 'Geopotential height (gpm)',
+                                       'Temperature (C)', 'Relative humidity (%)', 'Temperature inside styrofoam box (C)',
+                                       'Ozone partial pressure (mPa)', 'Horizontal wind direction (degrees)', 'Horizontal wind speed (m/s)'])
+    dfd = dfd[1:]
+
     if(len(dfd) < 300): continue
     if len(dfd.columns) < 8: continue
     try:
@@ -351,7 +358,6 @@ for filename in (allFiles):
             print('skip this dataset for now, use the mean of everything later')
             continue
     except FileNotFoundError:
-        print(metafile)
         continue
 
     dfm = dfm.T
@@ -371,8 +377,7 @@ for filename in (allFiles):
 
     # pname = filename.split(".")[-2].split("s")[0]
     # pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/Nilu/Sodankyl/'
-    pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/sodanky/ames/o3sonde/'
-    print('raw', rawname)
+    pname = '/home/poyraden/Analysis/Homogenization_Analysis/Files/NDACC/ftp/ndacc/station/neumayer/ames/o3sonde/'
 
     #
     dfl.to_hdf(pname + '/Current/' + rawname, key = 'df')
